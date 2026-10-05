@@ -424,7 +424,22 @@ pnpm preview            # 本地预览构建产物
   需要验证 Dexie 真实行为时用 `createPairedTestStore(name)`。
 - 联网接口用例用 `describe.skipIf / it.skipIf` 条件跳过，CI 设 `ACW_SKIP_API=1`。
 
-### 8.4 部署（GitHub Pages）
+### 8.4 E2E 回归测试（`tests/e2e/`）
+
+用 Playwright 驱动**真实浏览器**打开**真实构建的站点**，断言界面与 IndexedDB ——
+补单元测试的盲区（样式失效、布局遮挡、跨版本存储串味等，只有真开浏览器才能发现）。
+
+```bash
+# 先构建并起本地 preview（端口 4173），再跑
+cd tests/e2e && node w6.cjs
+```
+
+- 12 个脚本，覆盖各阶段功能与汇率/行情自动获取；详见 `tests/e2e/README.md`
+- ⚠️ **新增联网功能时必须扩展 `tests/e2e/_helpers.cjs` 里的网络桩**，
+  否则预置的固定汇率/行情会被真实抓取覆盖，断言随机失败
+- 这套测试**不在 CI 里跑**（需要先起 preview 服务），由本地开发时手动执行
+
+### 8.5 部署（GitHub Pages）
 
 `.github/workflows/deploy.yml` 在 `push main` 时执行：
 
@@ -439,7 +454,7 @@ checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
 - **无 Service Worker、无 cache API** → 不存在缓存互顶问题。
 - **无外部字体 / CDN**。
 
-### 8.5 网络行为（重要，容易误判）
+### 8.6 网络行为（重要，容易误判）
 
 **汇率会自动获取**，行情仍是纯手动录入。
 
@@ -481,7 +496,7 @@ checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
 - 1.0 的联网模块**不要**在 2.0 的新功能里调用；
 - 若要彻底移除，需要拆分入口或做代码分割 —— 属已知 P2（见 §11）。
 
-### 8.6 兜底汇率文件（`public/fx-seed.json`）
+### 8.7 兜底汇率文件（`public/fx-seed.json`）
 
 网络源都拿不到时使用。**你只需要维护这一个文件**：
 
