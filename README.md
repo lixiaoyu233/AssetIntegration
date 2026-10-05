@@ -87,7 +87,9 @@ src/
 │   │   ├── fx.ts              #   汇率解析（缺汇率绝不 1:1）
 │   │   ├── policy.ts          #   ★ 报价新鲜度策略（LIVE 1h / DELAYED 1d / CLOSED ∞ …）
 │   │   ├── basis.ts           #   估值依据（给 UI 展示「这个数怎么来的」）
-│   │   └── priceService.ts    #   手动行情 / 汇率录入
+│   │   ├── priceService.ts    #   手动行情 / 汇率录入
+│   │   ├── fxAutoFetch.ts     #   汇率自动获取（三级降级：er-api → jsdelivr → 种子）
+│   │   └── quoteAutoFetch.ts  #   行情自动获取（按 instrumentType 路由：腾讯 / 天天基金）
 │   ├── performance/           # 快照与归因
 │   │   ├── snapshot.ts        #   ★ buildSnapshot / captureSnapshot（含日期守卫）
 │   │   ├── dailySnapshot.ts   #   每日快照的幂等与崩溃恢复
@@ -438,6 +440,7 @@ cd tests/e2e && node w6.cjs
 - ⚠️ **新增联网功能时必须扩展 `tests/e2e/_helpers.cjs` 里的网络桩**，
   否则预置的固定汇率/行情会被真实抓取覆盖，断言随机失败
 - 这套测试**不在 CI 里跑**（需要先起 preview 服务），由本地开发时手动执行
+- `/tmp/acw-verify/` 是这套脚本进入仓库**之前**的旧存放地，**已废弃，不要再用**
 
 ### 8.5 部署（GitHub Pages）
 
@@ -456,12 +459,13 @@ checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
 
 ### 8.6 网络行为（重要，容易误判）
 
-**汇率会自动获取**，行情仍是纯手动录入。
+**汇率和行情都会自动获取**；两者都可以再用「手动录入」覆盖。
 
 | 数据类型 | 来源 | 是否联网 |
 | --- | --- | --- |
 | **汇率** | 自动拉取（三级降级，见下） | ✅ 联网 |
-| 行情（价格 / 净值） | 用户手动录入（`valuation/priceService.ts`） | ❌ 不联网 |
+| **行情（价格 / 净值）** | 自动拉取（按 `instrumentType` 路由，见下） | ✅ 联网 |
+| 手动行情 / 手动汇率 | `valuation/priceService.ts`（写入 `source: 'manual'`） | ❌ 不联网 |
 
 **汇率的三级降级**（`src/lib/valuation/fxAutoFetch.ts`）：
 
@@ -485,6 +489,22 @@ checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
 > 若先比状态优先级，一条已过期的 `LIVE` 会压住不过期的 `SEED`，
 > 导致「拉取失败回落兜底」失效。改这里前请先读该函数的注释。
 
+**行情的路由与兜底**（`src/lib/valuation/quoteAutoFetch.ts`，经 `hooks/useQuoteAutoSync.ts` 接入）：
+
+| `instrumentType` | 数据源 | 价格字段 | `priceKind` |
+| --- | --- | --- | --- |
+| `fund`（场外基金） | `fundmobapi.eastmoney.com` | `NAV` 单位净值 | `nav` |
+| `stock` / `etf`（含境内 sh/sz） | `qt.gtimg.cn`（**GBK 编码**） | 现价 | `market_price` |
+| 其它（bond / gold / crypto …） | 不自动获取，保持手动 | — | — |
+
+- 代码格式（6 位数字 / 1~6 位字母 / 1~5 位数字）**只用来决定「去哪个接口取数」**，
+  **不决定「这是什么资产」** —— 资产类别始终由用户明确选择（见 §10 第 13 条）。
+- 腾讯对无效代码返回 `v_pv_none_match="1";` —— **必须识别**，否则会被当成空结果误报成功。
+- 触发时机：**打开应用 / 用户点「更新全部行情」**，不做定时轮询（与汇率不同）。
+- **行情刻意不做静态种子文件**：你有多少标的就有多少条，且盘中分钟级变化，
+  手工维护必然过期。兜底由 `quotes` 表自身承担 —— 拉取成功的记录留在库里，
+  网络失败时 `policy.ts` 自动把它降级为 `STALE`，引擎给出「仅供展示」的过期价。
+
 ⚠️ **生产 bundle 里还有 1.0 视图的联网代码**：`src/main.tsx` 同时导入了
 1.0 的 legacy 视图与 2.0 的正式外壳，由 `resolveView()` 运行时选择
 （默认 `w3` = 2.0；`?legacy=1` 或 `?w2=1` 才是 1.0）。因此
@@ -492,7 +512,10 @@ checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
 （各含一处 `fetch`，属 1.0 的基金与美股实时行情）会被打进同一个 chunk。
 
 **结论**：
-- 2.0 会自动发起的网络请求只有**汇率**这一类；
+- 2.0 会自动发起的网络请求有**两类：汇率、行情**；
+- ⚠️ 因此**新增联网模块时必须同步扩展回归脚本的网络桩**，
+  且汇率、行情两类都要桩（见 [`tests/e2e/README.md`](tests/e2e/README.md)）——
+  否则自动拉取会覆盖脚本预置的固定值，断言随机失败；
 - 1.0 的联网模块**不要**在 2.0 的新功能里调用；
 - 若要彻底移除，需要拆分入口或做代码分割 —— 属已知 P2（见 §11）。
 

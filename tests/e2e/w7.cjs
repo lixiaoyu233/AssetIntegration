@@ -3,6 +3,21 @@
  */
 const { BASE, DEVICE, chromium, devices, makeReporter, stubFxNetwork, stubQuoteNetwork } = require('./_helpers.cjs');
 
+/*
+ * 临时文件目录（「坏备份」「高版本备份」的落盘位置）。
+ *
+ * ⚠️ 原来是硬编码的 `/tmp/acw-verify/...` —— 那是本套脚本进入仓库前的
+ * 原始存放地，已废弃（见 `tests/e2e/README.md`）。脚本挪进仓库后，
+ * 那个目录不再保证存在，非标准 TMPDIR 的平台更是必然不存在。
+ *
+ * 现改为「`E2E_TMP` 环境变量 → 系统临时目录」，并在启动时自动创建。
+ */
+const fs = require('fs');
+const os = require('os');
+const nodePath = require('path');
+const TMP_DIR = process.env.E2E_TMP || nodePath.join(os.tmpdir(), 'acw-verify');
+fs.mkdirSync(TMP_DIR, { recursive: true });
+
 const check = makeReporter();
 
 /** 清空数据库，模拟全新用户 */
@@ -145,7 +160,6 @@ const dumpCounts = (page) => page.evaluate(async () => {
     p.click('[data-testid="backup-export"]'),
   ]);
   const path = await download.path();
-  const fs = require('fs');
   const exported = JSON.parse(fs.readFileSync(path, 'utf8'));
   check('⑱ 导出成功且文件名合理', /wealthcard-backup-\d{8}-\d{4}\.json/.test(download.suggestedFilename()), download.suggestedFilename());
   check('⑲ 【核心】信封含 format/schemaVersion/dbVersion/exportedAt/counts/checksum',
@@ -161,7 +175,7 @@ const dumpCounts = (page) => page.evaluate(async () => {
   const bad = JSON.parse(JSON.stringify(exported));
   bad.data.portfolio.holdings[0].instrumentId = 'ghost';
   // 重算 checksum 以绕过校验和，专门测引用完整性
-  const badPath = '/tmp/acw-verify/w7-bad.json';
+  const badPath = nodePath.join(TMP_DIR, 'w7-bad.json');
   fs.writeFileSync(badPath, JSON.stringify(bad));
   await p.setInputFiles('[data-testid="backup-file"]', badPath);
   await p.waitForSelector('[data-testid="backup-report"]', { timeout: 15000 });
@@ -171,7 +185,7 @@ const dumpCounts = (page) => page.evaluate(async () => {
   /* ---- 高版本 → 硬拒绝 ---- */
   const higher = JSON.parse(JSON.stringify(exported));
   higher.schemaVersion = 99;
-  const higherPath = '/tmp/acw-verify/w7-higher.json';
+  const higherPath = nodePath.join(TMP_DIR, 'w7-higher.json');
   fs.writeFileSync(higherPath, JSON.stringify(higher));
   await p.setInputFiles('[data-testid="backup-file"]', higherPath);
   await p.waitForSelector('[data-testid="backup-report"]', { timeout: 15000 });
