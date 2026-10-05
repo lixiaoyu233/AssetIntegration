@@ -3,6 +3,7 @@ import type { AssetClass, Instrument, Portfolio2 } from '../types/portfolio2'
 import type { AnalysisView } from '../lib/analysis'
 import type { PortfolioRepository } from '../lib/db/repository'
 import { ASSET_CLASS_LABEL } from '../lib/analysis/dimensions'
+import { ASSET_CLASS_HINT } from '../types/portfolio2'
 import { classifyInstrument } from '../lib/analysis/classify'
 import Sheet from './Sheet'
 
@@ -242,9 +243,13 @@ export default function ClassifySheet({
                   >
                     {/* 刻意不预选：必须由用户主动选择 */}
                     <option value="">请选择类别…</option>
+                    {/*
+                      带释义：裸标签不足以分清边界（尤其「固收」与「股票」），
+                      且系统里还有名字几乎一样的 InstrumentType，容易混。
+                    */}
                     {SELECTABLE.map((c) => (
                       <option key={c} value={c}>
-                        {ASSET_CLASS_LABEL[c]}
+                        {ASSET_CLASS_LABEL[c]}（{ASSET_CLASS_HINT[c]}）
                       </option>
                     ))}
                   </select>
@@ -258,6 +263,7 @@ export default function ClassifySheet({
                     确认
                   </button>
                 </div>
+
               </li>
             )
           })}

@@ -170,10 +170,18 @@ export default function CashConvertSheet({
       subtitle={`${candidates.length} 项可转换`}
     >
       <p className="rounded-xl border border-line bg-s2 px-3 py-2 text-[11px] leading-relaxed text-ink3">
-        此操作将会：
-        <br />· 为该现金创建一条**期初调整**记录（期初余额 = 当前金额）
-        <br />· 之后该现金余额由**交易流水**驱动（存入 / 取出 / 买入扣款等）
-        <br />· **不会**改变当前资产总额
+        <span className="text-ink2">现金有两种记法：</span>
+        <br />· 手动金额（现在）：你直接填一个数字，它不会自己变。
+        <br />· 交易驱动（转换后）：余额由一笔笔交易累计，存入 / 取出 / 利息 /
+        转账 / 买入扣款都会自动增减。
+        <br />
+        <br />
+        <span className="text-ink2">转成交易驱动之后：</span>
+        <br />· 记录「存入 / 取出」时，这笔现金会自动跟着变；
+        <br />· 账户间的转账、换汇会正确计入；
+        <br />· 现金流分析里能看到这笔钱的活动；
+        <br />· 会先生成一条期初调整（= 当前金额）作为起点，
+        <br />· 当前资产总额不变 —— 只是换了记录方式。
       </p>
 
       {error ? (
@@ -212,7 +220,8 @@ export default function CashConvertSheet({
                   <p className="text-[11px] leading-relaxed text-ink3">
                     确认把「{instrument.name}」转为交易驱动现金？
                     <br />
-                    将创建期初调整 {amount.toLocaleString('zh-CN')} {instrument.currency}。
+                    将创建期初调整 {amount.toLocaleString('zh-CN')} {instrument.currency}，
+                    之后这笔现金会随交易自动增减。资产总额不变。
                   </p>
                   <div className="mt-2 flex gap-2">
                     <button

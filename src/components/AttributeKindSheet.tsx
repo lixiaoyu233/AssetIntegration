@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { AssetClass, InstrumentType, Portfolio2 } from '../types/portfolio2'
 import type { PortfolioRepository } from '../lib/db/repository'
 import { ASSET_CLASS_LABEL } from '../lib/analysis/dimensions'
+import { ASSET_CLASS_DESC, ASSET_CLASS_HINT } from '../types/portfolio2'
 import Sheet from './Sheet'
 
 /**
@@ -247,6 +248,13 @@ export default function AttributeKindSheet({
                     </option>
                   ))}
                 </select>
+                {/* 选中后的完整说明：归类看底层资产，不看工具形态 */}
+                <span
+                  className="pointer-events-none mt-1 block text-[10px] leading-relaxed text-ink4"
+                  data-testid="attr-class-hint"
+                >
+                  {ASSET_CLASS_DESC[current.assetClass]}
+                </span>
               </label>
 
               <label className="block text-[11px] text-ink3">
@@ -264,7 +272,7 @@ export default function AttributeKindSheet({
                 >
                   {CLASSES.map((c) => (
                     <option key={c} value={c}>
-                      {ASSET_CLASS_LABEL[c]}
+                      {ASSET_CLASS_LABEL[c]}（{ASSET_CLASS_HINT[c]}）
                     </option>
                   ))}
                 </select>

@@ -154,6 +154,55 @@ export const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
   liability: '负债',
 }
 
+/**
+ * 资产类别的**极简释义**，用于下拉选单等空间有限处。
+ *
+ * ## 为什么需要
+ *
+ * 裸标签（「现金」「固收」「股票」…）不足以让用户分清边界，典型困惑：
+ *
+ * - 「固收」到底指什么？债券？还是也包括银行理财？
+ * - 「股票」包不包含股票型基金和 ETF？
+ * - 「其他」和「待确认分类」差在哪？
+ *
+ * 更麻烦的是系统里还有 `InstrumentType`（投资工具类型），选项名字与
+ * 资产类别**几乎一样但含义不同**（`InstrumentType` = 「这是什么」，
+ * `AssetClass` = 「算什么资产」；沪深300ETF 的 type 是 `etf`、class 是 `equity`）。
+ *
+ * 因此这里的释义同时说明「涵盖范围」，帮助用户区分两者。
+ *
+ * ⚠️ 仅供 UI 显示，**不参与任何计算**，也不改变分类语义。
+ */
+export const ASSET_CLASS_HINT: Record<AssetClass, string> = {
+  cash: '活期 / 货币基金',
+  equity: '个股 / 股票型基金 / 股票 ETF',
+  fixed_income: '债券 / 债基 / 银行理财',
+  gold: '黄金',
+  real_estate: '房产',
+  crypto: '加密资产',
+  receivable: '借出待收的钱',
+  other: '归不进上面几类的',
+  liability: '房贷 / 信用卡等',
+}
+
+/**
+ * 资产类别的完整说明，用于用户选中后展示。
+ *
+ * 比 `ASSET_CLASS_HINT` 多解释了「为什么算这一类」与常见误判，
+ * 例如明确 ETF / 基金的归类看底层资产而不是工具形态。
+ */
+export const ASSET_CLASS_DESC: Record<AssetClass, string> = {
+  cash: '活期存款、货币基金等可随时取用的钱。定期存款若当作长期固收，也可归入「固收」。',
+  equity: '个股，以及底层是股票的基金和 ETF —— 归类看底层资产，不看工具形态。',
+  fixed_income: '债券、债券型基金、银行理财等以固定收益为目标的资产。',
+  gold: '实物黄金、黄金 ETF 等。',
+  real_estate: '自住或投资的房产。房贷属于「负债」，两者分别计。',
+  crypto: '数字货币等加密资产。',
+  receivable: '借出去还没收回的钱、待收款。',
+  other: '确实归不进上面任何一类的资产。注意与「待确认分类」不同：那个是你还没选。',
+  liability: '房贷、信用卡欠款等需要偿还的部分。负债不计入资产占比。',
+}
+
 export const INSTRUMENT_TYPE_LABEL: Record<InstrumentType, string> = {
   stock: '个股',
   etf: 'ETF',

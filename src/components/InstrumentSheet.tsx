@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Info } from 'lucide-react'
 import type { AssetClass, CurrencyCode, InstrumentType, Region } from '../types/portfolio2'
 import {
+  ASSET_CLASS_DESC,
+  ASSET_CLASS_HINT,
   ASSET_CLASS_LABEL,
   INSTRUMENT_TYPE_LABEL,
   REGION_LABEL,
@@ -158,10 +160,19 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
             <option value="">请选择…</option>
             {CLASSES.map((c) => (
               <option key={c} value={c}>
-                {ASSET_CLASS_LABEL[c]}
+                {ASSET_CLASS_LABEL[c]}（{ASSET_CLASS_HINT[c]}）
               </option>
             ))}
           </select>
+          {/* 选中后的完整说明：归类看底层资产，不看工具形态 */}
+          {assetClass ? (
+            <span
+              className="pointer-events-none mt-1 block text-[10px] leading-relaxed text-ink4"
+              data-testid="instrument-asset-class-hint"
+            >
+              {ASSET_CLASS_DESC[assetClass as AssetClass]}
+            </span>
+          ) : null}
         </label>
 
         <label className="block text-[11px] text-ink3">
