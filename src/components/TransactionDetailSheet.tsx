@@ -322,15 +322,23 @@ export default function TransactionDetailSheet({
         <ul className="mt-1.5 space-y-1.5" data-testid="tx-detail-effects">
           {effects.map((e, i) => {
             const inst = instrumentById.get(e.instrumentId)
+            /*
+             * ⚠️ 这里是**给用户看的**，不能用账本内部术语（投资腿 / 资金腿）。
+             * 而且要把**资产名放在最前面** —— 原来「投资腿 · 招商白酒」的写法，
+             * 每一条都以同一个词开头，扫视时看不出「这是哪一项资产」。
+             */
             const legLabel =
-              e.leg === 'instrument' ? '投资腿' : e.leg === 'cash' ? '资金腿（转出）' : '资金腿（转入）'
+              e.leg === 'instrument' ? '持仓' : e.leg === 'cash' ? '现金 · 转出' : '现金 · 转入'
             return (
               <li
                 key={`${e.instrumentId}-${e.leg}-${i}`}
                 className="rounded-xl border border-line bg-s1 px-3 py-2 text-[11px]"
               >
-                <p className="text-ink2">
-                  {legLabel} · {inst?.name ?? e.instrumentId}
+                <p className="flex items-center gap-1.5 text-ink2">
+                  <span className="min-w-0 truncate text-ink1">{inst?.name ?? e.instrumentId}</span>
+                  <span className="shrink-0 rounded bg-s2 px-1.5 py-0.5 text-[10px] text-ink3">
+                    {legLabel}
+                  </span>
                 </p>
                 <p className="mt-0.5 text-ink3">
                   数量 {signed(e.quantityDelta)}

@@ -58,6 +58,7 @@ import type {
   QuoteStatus,
 } from '../../types/portfolio2'
 import type { PortfolioRepository } from '../db/repository'
+import { DEFAULT_QUOTE_POLICY } from './policy'
 
 /* ------------------------------------------------------------------ *
  * 可调参数
@@ -131,12 +132,15 @@ export function toTencentSymbol(code: string, kind: CodeKind): string | null {
  * ------------------------------------------------------------------ */
 
 /**
- * 腾讯行情时间格式有三种，需分别归一化：
+ * 腾讯行情时间格式有三种，先统一归一化成「墙钟时间」（`YYYY-MM-DDTHH:mm:ss`）：
  * - 美股：`2026-10-02 16:00:01`
  * - 港股：`2026/10/05 13:10:49`
  * - 境内：`20260930161443`（紧凑型）
+ *
+ * ⚠️ 这里产出的**仍然是不带时区的墙上时间**，必须再经 `wallClockToIso()`
+ * 才能变成绝对时刻 —— 详见下方「时区归一化」。
  */
-function normalizeTencentTime(raw: string | undefined): string | undefined {
+function normalizeTencentWallClock(raw: string | undefined): string | undefined {
   if (!raw) return undefined
   const s = raw.trim()
   // 紧凑型：YYYYMMDDHHmmss
@@ -149,6 +153,63 @@ function normalizeTencentTime(raw: string | undefined): string | undefined {
   if (!m) return undefined
   const [, y, mo, d, h, mi, sec = '00'] = m
   return `${y}-${mo}-${d}T${h}:${mi}:${sec}`
+}
+
+/* ------------------------------------------------------------------ *
+ * 时区归一化：交易所当地时间 → 绝对时刻
+ * ------------------------------------------------------------------ */
+
+/**
+ * 各市场的 IANA 时区。
+ *
+ * ⚠️ 腾讯 / 天天基金返回的时间都是**交易所当地时间**且**不带时区**。
+ * 直接 `new Date('2026-10-02T16:00:01')` 会按**运行环境本地时区**解析：
+ * 在中国（UTC+8）打开时，美东 16:00 被当成北京 16:00 ——
+ * 比真实时刻**早 12 小时**，于是刚拉到的行情立刻被判「已过期」。
+ * 更糟的是同一份数据在不同时区的设备上会得到不同结果，不可复现。
+ */
+const MARKET_TIME_ZONE: Record<CodeKind, string> = {
+  us: 'America/New_York',
+  hk: 'Asia/Hong_Kong',
+  cn: 'Asia/Shanghai',
+}
+
+/** 某个 UTC 时刻在指定时区的偏移（毫秒；东八区 = +28800000） */
+function zoneOffsetMs(utcMs: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(new Date(utcMs))
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0')
+  const asIfUtc = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour'),
+    get('minute'),
+    get('second'),
+  )
+  return asIfUtc - utcMs
+}
+
+/**
+ * 把「某时区的墙钟时间」转成带 `Z` 的绝对时刻。
+ *
+ * 两遍求偏移：第一遍用「把墙钟当 UTC」得到的近似时刻查偏移，
+ * 第二遍用修正后的时刻再查一次 —— 这样跨夏令时切换日也不会差一小时。
+ */
+export function wallClockToIso(wall: string, timeZone: string): string | undefined {
+  const naive = Date.parse(`${wall}Z`)
+  if (!Number.isFinite(naive)) return undefined
+  const first = naive - zoneOffsetMs(naive, timeZone)
+  const second = naive - zoneOffsetMs(first, timeZone)
+  return new Date(second).toISOString()
 }
 
 const num = (v: string | undefined): number | undefined => {
@@ -205,7 +266,15 @@ export function parseTencentQuotes(text: string): ParsedQuote[] {
      * 优先用字段 [2]（更完整），缺失时回落到变量名。回配到标的时两者都会尝试。
      */
     const code = (f[2] ?? '').trim() || `${varPrefix === 'us' || varPrefix === 'hk' ? '' : varPrefix}${varCode}`
-    const timestamp = normalizeTencentTime(f[30]) ?? new Date().toISOString()
+    /*
+     * 变量名前缀（`us` / `hk` / `sh` / `sz`）决定这是哪个市场，
+     * 也就决定了该用哪个时区解释这条时间。
+     */
+    const kind: CodeKind = varPrefix === 'us' ? 'us' : varPrefix === 'hk' ? 'hk' : 'cn'
+    const wall = normalizeTencentWallClock(f[30])
+    // 时间缺失/无法解析时退回「抓取时刻」，而不是写一个错的绝对时刻
+    const timestamp =
+      (wall ? wallClockToIso(wall, MARKET_TIME_ZONE[kind]) : undefined) ?? new Date().toISOString()
     out.push({ code, name, price, timestamp })
   }
   return out
@@ -222,8 +291,14 @@ export function parseFundNav(payload: unknown): ParsedQuote[] {
     const name = (r.SHORTNAME ?? '').trim()
     const price = num(r.NAV)
     if (!code || !name || price === undefined) continue
-    // 净值只给日期（收盘后公布），用当天 00:00 作为依据时间
-    const timestamp = r.PDATE ? `${r.PDATE.slice(0, 10)}T00:00:00.000Z` : new Date().toISOString()
+    /*
+     * 净值只给日期（收盘后公布）。`PDATE` 是**北京时间**的日期，
+     * 因此按 `+08:00` 解析 —— 写成 `Z` 等于把它当成 UTC 00:00，
+     * 即北京时间当天 08:00，凭空偏移 8 小时。
+     */
+    const timestamp = r.PDATE
+      ? `${r.PDATE.slice(0, 10)}T00:00:00.000+08:00`
+      : new Date().toISOString()
     out.push({ code, name, price, timestamp })
   }
   return out
@@ -328,10 +403,38 @@ export function routeFor(instrument: Instrument): QuoteRoute | null {
  * ------------------------------------------------------------------ */
 
 /**
+ * 自动获取的行情该以什么状态落库。
+ *
+ * ⚠️ **绝不能一律写 `LIVE`**。
+ *
+ * `policy.ts` 给 `LIVE` 的新鲜度上限只有 **1 小时**，而自动获取拿到的
+ * 往往不是「此刻的盘中价」：
+ *
+ * - **场外基金**给的是**正式单位净值**，一天只公布一条，时间戳就是净值日；
+ * - **场内**闭市后的收盘价也不再变化。
+ *
+ * 一律写 LIVE 的后果：**刚拉完就已经「过期几小时」**，
+ * 「数据完整度」里凭空多出一排「估值已过期」，而数据其实是最新的。
+ *
+ * 因此按语义定状态：
+ * - 场外基金净值 → `CLOSED`（正式收盘净值，到下一个交易日之前都有效）；
+ * - 场内：距现在 ≤ `LIVE` 上限 → `LIVE`（盘中价）；否则 → `CLOSED`（收盘价）。
+ */
+function statusForQuote(source: QuoteRoute['source'], quoteAt: string, nowMs: number): QuoteStatus {
+  if (source === 'eastmoney-fund') return 'CLOSED'
+  const t = new Date(quoteAt).getTime()
+  if (!Number.isFinite(t)) return 'CLOSED'
+  // age < 0（轻微时钟偏差造成的「未来时间」）按最新处理，不因此判过期
+  return nowMs - t <= DEFAULT_QUOTE_POLICY.freshnessMs.LIVE ? 'LIVE' : 'CLOSED'
+}
+
+/**
  * 写入一条行情。
  *
  * 与汇率同理：`source` 区分来源，因此**自动拉取不会覆盖手填值**
  * （手填的 `source` 是 `'manual'`）。
+ *
+ * @param nowMs 本次同步的参考时刻，用于判定「盘中价」还是「收盘价」
  */
 async function persistQuote(
   repo: PortfolioRepository,
@@ -339,8 +442,9 @@ async function persistQuote(
   route: QuoteRoute,
   parsed: ParsedQuote,
   currency: CurrencyCode,
+  nowMs: number,
 ): Promise<void> {
-  const status: QuoteStatus = 'LIVE'
+  const status = statusForQuote(route.source, parsed.timestamp, nowMs)
   const quote: Quote = {
     id: `q_auto_${route.source}_${instrumentId}_${parsed.timestamp.slice(0, 10)}`,
     instrumentId,
@@ -397,7 +501,13 @@ export async function syncQuotes(
   options: { instrumentIds?: string[]; now?: () => number } = {},
 ): Promise<QuoteSyncResult> {
   const now = options.now ?? (() => Date.now())
-  const syncedAt = new Date(now()).toISOString()
+  /*
+   * 本次同步的统一参考时刻。
+   * 状态判定（`statusForQuote`）与 `syncedAt` 必须用**同一个** now，
+   * 否则同一条行情可能按两个不同时点得出互相矛盾的状态。
+   */
+  const nowMs = now()
+  const syncedAt = new Date(nowMs).toISOString()
   const portfolio: Portfolio2 = await repo.loadPortfolio()
 
   const wanted = options.instrumentIds ? new Set(options.instrumentIds) : null
@@ -438,7 +548,7 @@ export async function syncQuotes(
           })
           continue
         }
-        await persistQuote(repo, t.instrument.id, t.route, hit, t.instrument.currency)
+        await persistQuote(repo, t.instrument.id, t.route, hit, t.instrument.currency, nowMs)
         updatedIds.push(t.instrument.id)
         outcomes.push({
           instrumentId: t.instrument.id,
@@ -478,7 +588,7 @@ export async function syncQuotes(
           })
           continue
         }
-        await persistQuote(repo, t.instrument.id, t.route, hit, t.instrument.currency)
+        await persistQuote(repo, t.instrument.id, t.route, hit, t.instrument.currency, nowMs)
         updatedIds.push(t.instrument.id)
         outcomes.push({
           instrumentId: t.instrument.id,

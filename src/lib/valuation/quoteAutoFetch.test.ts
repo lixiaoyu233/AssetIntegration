@@ -10,7 +10,9 @@ import {
   routeFor,
   syncQuotes,
   toTencentSymbol,
+  wallClockToIso,
 } from './quoteAutoFetch'
+import { judgeQuote } from './quote'
 import { makeInstrument, makePortfolio } from '../valuation/__fixtures__/builders'
 import type { Instrument, Portfolio2 } from '../../types/portfolio2'
 
@@ -142,11 +144,11 @@ describe('行情自动获取 · 解析', () => {
 
     const [us, hk, cn] = out
     expect(us).toMatchObject({ code: 'SPY.AM', name: '标普500指数ETF-SPDR', price: 769.64 })
-    expect(us.timestamp).toBe('2026-10-02T16:00:01')
+    expect(us.timestamp).toBe('2026-10-02T20:00:01.000Z')
     expect(hk).toMatchObject({ name: '腾讯控股', price: 422.6 })
-    expect(hk.timestamp).toBe('2026-10-05T13:10:49')
+    expect(hk.timestamp).toBe('2026-10-05T05:10:49.000Z')
     expect(cn).toMatchObject({ name: '沪深300ETF华泰柏瑞', price: 4.432 })
-    expect(cn.timestamp).toBe('2026-09-30T16:14:43')
+    expect(cn.timestamp).toBe('2026-09-30T08:14:43.000Z')
   })
 
   it('腾讯：无效代码返回 none_match，必须解析出空数组（不能被当成成功）', () => {
@@ -171,7 +173,7 @@ describe('行情自动获取 · 解析', () => {
     const out = parseFundNav(payload)
     expect(out).toHaveLength(1)
     expect(out[0]).toMatchObject({ code: '161725', name: '招商中证白酒指数(LOF)A', price: 0.5314 })
-    expect(out[0].timestamp).toBe('2026-09-30T00:00:00.000Z')
+    expect(out[0].timestamp).toBe('2026-09-30T00:00:00.000+08:00')
   })
 
   it('场外基金：Datas 为 null / 结构异常时返回空数组（不崩）', () => {
@@ -225,17 +227,22 @@ describe('行情自动获取 · 同步', () => {
       return { ok: true, json: async () => fundBody } as unknown as Response
     }))
 
-    const r = await syncQuotes(repo)
+    // 固定参考时刻，避免断言随真实时钟漂移
+    const r = await syncQuotes(repo, { now: () => Date.parse('2026-10-05T00:00:00.000Z') })
     expect(r.written).toBe(2)
     expect(calls.some((u) => u.includes('gtimg.cn'))).toBe(true)
     expect(calls.some((u) => u.includes('fundmobapi'))).toBe(true)
 
     const rows = await repo.quotes.getAll()
     expect(rows).toHaveLength(2)
+    /*
+     * ⚠️ 状态**不再一律 LIVE**（LIVE 的寿命只有 1 小时）。
+     * 这两条的时间戳都远早于参考时刻 → 都是「收盘价」语义的 CLOSED。
+     */
     const etf = rows.find((q) => q.instrumentId === 'i_etf')!
-    expect(etf).toMatchObject({ priceKind: 'market_price', marketPrice: 4.432, source: 'tencent', status: 'LIVE' })
+    expect(etf).toMatchObject({ priceKind: 'market_price', marketPrice: 4.432, source: 'tencent', status: 'CLOSED' })
     const fund = rows.find((q) => q.instrumentId === 'i_fund')!
-    expect(fund).toMatchObject({ priceKind: 'nav', nav: 0.5314, source: 'eastmoney-fund', status: 'LIVE' })
+    expect(fund).toMatchObject({ priceKind: 'nav', nav: 0.5314, source: 'eastmoney-fund', status: 'CLOSED' })
 
     // bond 不在结果里（不自动获取）
     expect(r.outcomes.every((o) => o.instrumentId !== 'i_bond')).toBe(true)
@@ -323,5 +330,72 @@ describe('行情自动获取 · 同步', () => {
     expect(seen).toHaveLength(1)
     expect(seen[0]).toContain('sh510300')
     expect(seen[0]).not.toContain('sz159915')
+  })
+
+  it('【核心】盘中（1 小时内）→ LIVE；已收盘 → CLOSED', async () => {
+    await repo.replaceAll(portfolioOf([inst({ id: 'i_cn', name: '沪深300', instrumentType: 'etf', symbol: '510300' })]))
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () => new TextEncoder().encode(
+        // 2026-10-05 14:59 北京时间
+        tencentLine('sh510300', { name: 'ETF', code: '510300', price: '4.432', prev: '4.416', time: '20261005145900' }),
+      ).buffer,
+    } as unknown as Response)))
+
+    // 参考时刻 = 15:00 北京时间（07:00Z），距行情 1 分钟 → 盘中价
+    await syncQuotes(repo, { now: () => Date.parse('2026-10-05T07:00:00.000Z') })
+    expect((await repo.quotes.getAll())[0].status).toBe('LIVE')
+
+    // 参考时刻 = 次日 09:00 北京时间 → 已收盘，同一条记录被刷新为 CLOSED
+    await syncQuotes(repo, { now: () => Date.parse('2026-10-06T01:00:00.000Z') })
+    const rows = await repo.quotes.getAll()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].status).toBe('CLOSED')
+  })
+
+  it('【核心】自动获取的基金净值不会被误判「估值已过期」', async () => {
+    await repo.replaceAll(portfolioOf([inst({ id: 'i_fund', name: '白酒', instrumentType: 'fund', symbol: '161725' })]))
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ Datas: [{ FCODE: '161725', SHORTNAME: '白酒', NAV: '0.5314', PDATE: '2026-10-05' }] }),
+    } as unknown as Response)))
+
+    const NOW = Date.parse('2026-10-05T15:00:00+08:00')
+    await syncQuotes(repo, { now: () => NOW })
+    const q = (await repo.quotes.getAll())[0]
+
+    /*
+     * 回归：旧行为一律写 LIVE（寿命 1 小时），而净值日 00:00 已是「15 小时前」
+     * → 刚拉完就被判过期，「数据完整度」凭空多出「估值已过期 N 项」。
+     */
+    expect(q.status).toBe('CLOSED')
+    expect(judgeQuote(q, NOW).usable).toBe(true)
+  })
+})
+
+/* ================================================================== *
+ * ⑤ 时区归一化
+ * ================================================================== */
+
+describe('行情自动获取 · 时区归一化', () => {
+  it('交易所当地时间 → 绝对时刻（夏令时 / 冬令时都正确）', () => {
+    // 美股：2026-10-02 属夏令时 EDT（UTC-4）
+    expect(wallClockToIso('2026-10-02T16:00:01', 'America/New_York')).toBe('2026-10-02T20:00:01.000Z')
+    // 美股：2026-12-02 属冬令时 EST（UTC-5）
+    expect(wallClockToIso('2026-12-02T16:00:01', 'America/New_York')).toBe('2026-12-02T21:00:01.000Z')
+    // 港股 / 境内：UTC+8
+    expect(wallClockToIso('2026-10-05T13:10:49', 'Asia/Hong_Kong')).toBe('2026-10-05T05:10:49.000Z')
+    expect(wallClockToIso('2026-09-30T16:14:43', 'Asia/Shanghai')).toBe('2026-09-30T08:14:43.000Z')
+  })
+
+  it('无法解析的墙钟时间返回 undefined（不编造时刻）', () => {
+    expect(wallClockToIso('bad', 'Asia/Shanghai')).toBeUndefined()
+    expect(wallClockToIso('', 'Asia/Shanghai')).toBeUndefined()
+  })
+
+  it('腾讯返回的时间带上了正确时区（不再依赖运行环境本地时区）', () => {
+    // 同一份返回体，在任何时区的机器上都应解析出同一个绝对时刻
+    const text = tencentLine('usSPY', { name: 'SPY', code: 'SPY.AM', price: '769.64', prev: '763.99', time: '2026-10-02 16:00:01' })
+    expect(parseTencentQuotes(text)[0].timestamp).toBe('2026-10-02T20:00:01.000Z')
   })
 })

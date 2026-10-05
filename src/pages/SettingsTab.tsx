@@ -4,6 +4,7 @@ import type { Portfolio2 } from '../types/portfolio2'
 import type { AnalysisView } from '../lib/analysis'
 import type { PortfolioRepository } from '../lib/db/repository'
 import { quoteCoverageOf } from '../lib/valuation/basis'
+import type { QuoteSyncResult } from '../lib/valuation/quoteAutoFetch'
 import { estimateStorage } from '../lib/db/dexie'
 import BackupSheet from '../components/BackupSheet'
 import QuoteSheet from '../components/QuoteSheet'
@@ -52,6 +53,8 @@ export interface SettingsTabProps {
    */
   quoteSync?: {
     busy: boolean
+    /** 最近一次同步结果（未同步过为 null）。用于如实展示成功与失败 */
+    last: QuoteSyncResult | null
     refresh: (instrumentIds?: string[]) => Promise<unknown>
   }
 }
@@ -59,6 +62,9 @@ export interface SettingsTabProps {
 export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSync, quoteSync }: SettingsTabProps) {
   /** 行情 / 汇率覆盖率（纯读取，不改金额） */
   const coverage = useMemo(() => quoteCoverageOf(portfolio), [portfolio])
+
+  /** 最近一次自动获取里失败的标的 —— 必须如实展示，不能静默吞掉 */
+  const failedQuotes = quoteSync?.last?.outcomes.filter((o) => !o.ok) ?? []
 
   /*
    * 读取存储状态（W7）。
@@ -242,18 +248,54 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
         <div className="mt-3 space-y-2">
           {/* 一键更新全部可自动获取的行情（不做定时轮询，只在用户点的时候拉） */}
           {quoteSync ? (
-            <button
-              type="button"
-              onClick={() => void quoteSync.refresh()}
-              disabled={quoteSync.busy}
-              className="flex w-full items-center justify-between rounded-2xl border border-line bg-s2 px-4 py-3 text-left text-[13px] text-ink2 disabled:opacity-50"
-              data-testid="refresh-all-quotes"
-            >
-              <span>更新全部行情</span>
-              <span className="text-[11px] text-ink4">
-                {quoteSync.busy ? '获取中…' : '按代码自动获取'}
-              </span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => void quoteSync.refresh()}
+                disabled={quoteSync.busy}
+                className="flex w-full items-center justify-between rounded-2xl border border-line bg-s2 px-4 py-3 text-left text-[13px] text-ink2 disabled:opacity-50"
+                data-testid="refresh-all-quotes"
+              >
+                <span>更新全部行情</span>
+                <span className="text-[11px] text-ink4">
+                  {quoteSync.busy ? '获取中…' : '按代码自动获取'}
+                </span>
+              </button>
+
+              {/*
+                同步结果：**成功与失败都必须可见**。
+                没有这块时，点「更新全部行情」既不报成功也不报失败 ——
+                用户无法区分「数据没变」与「根本没写成功」。
+              */}
+              {quoteSync.last ? (
+                <div
+                  className="rounded-2xl border border-line bg-s2 px-3 py-2"
+                  data-testid="quote-sync-result"
+                >
+                  <p className="text-[11px] text-ink3">
+                    上次更新：{new Date(quoteSync.last.syncedAt).toLocaleString('zh-CN')}
+                    {' · '}
+                    {quoteSync.last.written > 0
+                      ? `成功 ${quoteSync.last.written} 项`
+                      : quoteSync.last.outcomes.length === 0
+                        ? '没有可自动获取的标的（基金需 6 位代码，股票 / ETF 需可识别的代码）'
+                        : '没有更新成功'}
+                  </p>
+                  {failedQuotes.length > 0 ? (
+                    <ul
+                      className="mt-1 space-y-0.5 text-[11px] tone-warn"
+                      data-testid="quote-sync-errors"
+                    >
+                      {failedQuotes.map((o) => (
+                        <li key={o.instrumentId}>
+                          · {o.instrumentName}：{o.error ?? '获取失败'}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
           ) : null}
 
           <button
