@@ -332,25 +332,49 @@ describe('行情自动获取 · 同步', () => {
     expect(seen[0]).not.toContain('sz159915')
   })
 
-  it('【核心】盘中（1 小时内）→ LIVE；已收盘 → CLOSED', async () => {
+  it('【核心】交易时段内 → LIVE；已闭市 → CLOSED', async () => {
     await repo.replaceAll(portfolioOf([inst({ id: 'i_cn', name: '沪深300', instrumentType: 'etf', symbol: '510300' })]))
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
       arrayBuffer: async () => new TextEncoder().encode(
-        // 2026-10-05 14:59 北京时间
-        tencentLine('sh510300', { name: 'ETF', code: '510300', price: '4.432', prev: '4.416', time: '20261005145900' }),
+        // 2026-10-05（周一）10:00 北京时间
+        tencentLine('sh510300', { name: 'ETF', code: '510300', price: '4.432', prev: '4.416', time: '20261005100000' }),
       ).buffer,
     } as unknown as Response)))
 
-    // 参考时刻 = 15:00 北京时间（07:00Z），距行情 1 分钟 → 盘中价
-    await syncQuotes(repo, { now: () => Date.parse('2026-10-05T07:00:00.000Z') })
+    // 参考时刻 = 10:05 北京时间（02:05Z）→ 开盘中，距行情 5 分钟 → 盘中价
+    await syncQuotes(repo, { now: () => Date.parse('2026-10-05T02:05:00.000Z') })
     expect((await repo.quotes.getAll())[0].status).toBe('LIVE')
 
-    // 参考时刻 = 次日 09:00 北京时间 → 已收盘，同一条记录被刷新为 CLOSED
-    await syncQuotes(repo, { now: () => Date.parse('2026-10-06T01:00:00.000Z') })
+    // 参考时刻 = 次日同一时刻 → 不在交易时段 → 收盘价
+    await syncQuotes(repo, { now: () => Date.parse('2026-10-06T02:05:00.000Z') })
     const rows = await repo.quotes.getAll()
     expect(rows).toHaveLength(1)
     expect(rows[0].status).toBe('CLOSED')
+  })
+
+  it('【核心】收盘后取到的收盘价记为 CLOSED，数小时后判读仍可用', async () => {
+    await repo.replaceAll(portfolioOf([inst({ id: 'i_cn', name: '沪深300', instrumentType: 'etf', symbol: '510300' })]))
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () => new TextEncoder().encode(
+        // 2026-10-05 15:00 北京时间收盘
+        tencentLine('sh510300', { name: 'ETF', code: '510300', price: '4.432', prev: '4.416', time: '20261005150000' }),
+      ).buffer,
+    } as unknown as Response)))
+
+    /*
+     * 收盘后 3 分钟抓取。
+     * 回归：只看「距现在多久」会把这条记成 LIVE（寿命 1 小时），
+     * 于是 16:00 之后首页又冒出一排「估值已过期」—— 而它本来就是收盘价。
+     */
+    const AT = Date.parse('2026-10-05T15:03:00+08:00')
+    await syncQuotes(repo, { now: () => AT })
+    const q = (await repo.quotes.getAll())[0]
+    expect(q.status).toBe('CLOSED')
+
+    // 当天深夜再判读，仍然可用（收盘价到下一个交易时段前都有效）
+    expect(judgeQuote(q, Date.parse('2026-10-05T23:00:00+08:00')).usable).toBe(true)
   })
 
   it('【核心】自动获取的基金净值不会被误判「估值已过期」', async () => {

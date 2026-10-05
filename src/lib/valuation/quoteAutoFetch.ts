@@ -212,6 +212,44 @@ export function wallClockToIso(wall: string, timeZone: string): string | undefin
   return new Date(second).toISOString()
 }
 
+/**
+ * 各市场的交易时段（**当地时间**，单位：从 0 点起的分钟数）。
+ *
+ * ⚠️ 不含节假日日历 —— 节日里工作日仍在时段内，但那时拿到的行情
+ * 必然是上一个交易日的、远超 `LIVE` 的 1 小时上限，照样会落成 `CLOSED`，
+ * 因此不需要额外维护一张交易日历。
+ */
+const MARKET_SESSION: Record<CodeKind, [number, number]> = {
+  cn: [9 * 60 + 30, 15 * 60], // 09:30–15:00
+  hk: [9 * 60 + 30, 16 * 60], // 09:30–16:00
+  us: [9 * 60 + 30, 16 * 60], // 09:30–16:00（当地时间，自动含夏令时）
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/** 某 UTC 时刻在指定时区是几点几分、星期几 */
+function marketLocalParts(utcMs: number, timeZone: string): { minutes: number; weekday: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(new Date(utcMs))
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return {
+    minutes: Number(get('hour')) * 60 + Number(get('minute')),
+    weekday: WEEKDAYS.indexOf(get('weekday')),
+  }
+}
+
+/** 该时刻对应市场**是否正在交易**（周一至周五 + 时段内；不含节假日） */
+function isMarketOpen(utcMs: number, market: CodeKind): boolean {
+  const { minutes, weekday } = marketLocalParts(utcMs, MARKET_TIME_ZONE[market])
+  const [open, close] = MARKET_SESSION[market]
+  return weekday >= 1 && weekday <= 5 && minutes >= open && minutes < close
+}
+
 const num = (v: string | undefined): number | undefined => {
   if (v === undefined) return undefined
   const n = Number(v)
@@ -224,8 +262,10 @@ export interface ParsedQuote {
   /** 接口返回的名称 —— 用于让用户确认「是不是这只」 */
   name: string
   price: number
-  /** 行情时间（ISO） */
+  /** 行情时间（ISO，**带时区**的绝对时刻） */
   timestamp: string
+  /** 该价格来自哪个市场（决定「现在是否在交易时段」）；场外基金不需要 */
+  market?: CodeKind
 }
 
 /**
@@ -275,7 +315,7 @@ export function parseTencentQuotes(text: string): ParsedQuote[] {
     // 时间缺失/无法解析时退回「抓取时刻」，而不是写一个错的绝对时刻
     const timestamp =
       (wall ? wallClockToIso(wall, MARKET_TIME_ZONE[kind]) : undefined) ?? new Date().toISOString()
-    out.push({ code, name, price, timestamp })
+    out.push({ code, name, price, timestamp, market: kind })
   }
   return out
 }
@@ -416,16 +456,29 @@ export function routeFor(instrument: Instrument): QuoteRoute | null {
  * 一律写 LIVE 的后果：**刚拉完就已经「过期几小时」**，
  * 「数据完整度」里凭空多出一排「估值已过期」，而数据其实是最新的。
  *
- * 因此按语义定状态：
- * - 场外基金净值 → `CLOSED`（正式收盘净值，到下一个交易日之前都有效）；
- * - 场内：距现在 ≤ `LIVE` 上限 → `LIVE`（盘中价）；否则 → `CLOSED`（收盘价）。
+ * 因此判定顺序是：
+ * 1. 场外基金净值 → `CLOSED`（正式收盘净值）；
+ * 2. 场内：**市场不在交易时段**（收盘后 / 开盘前 / 周末）→ `CLOSED`；
+ * 3. 交易时段内、且距现在 ≤ `LIVE` 上限 → `LIVE`（盘中价）；
+ * 4. 交易时段内但行情已超 1 小时 → `CLOSED`（拿到的是旧价，不当实时用）。
+ *
+ * ⚠️ 第 2 条是必需的：只看「距现在多久」的话，**收盘价会在 1 小时后
+ * 变成「已过期」** —— 而 15:00 收盘后那份价格就是收盘价，不该 16:00 失效。
+ * 判据从「抓取时刻」改为「市场是否开盘」，跨时区结果也一致。
  */
-function statusForQuote(source: QuoteRoute['source'], quoteAt: string, nowMs: number): QuoteStatus {
+function statusForQuote(
+  source: QuoteRoute['source'],
+  quoteAt: string,
+  nowMs: number,
+  market?: CodeKind,
+): QuoteStatus {
   if (source === 'eastmoney-fund') return 'CLOSED'
   const t = new Date(quoteAt).getTime()
   if (!Number.isFinite(t)) return 'CLOSED'
-  // age < 0（轻微时钟偏差造成的「未来时间」）按最新处理，不因此判过期
-  return nowMs - t <= DEFAULT_QUOTE_POLICY.freshnessMs.LIVE ? 'LIVE' : 'CLOSED'
+  // age < 0（轻微时钟偏差造成的「未来时间」）不因此判过期
+  const fresh = nowMs - t <= DEFAULT_QUOTE_POLICY.freshnessMs.LIVE
+  if (!market) return fresh ? 'LIVE' : 'CLOSED'
+  return fresh && isMarketOpen(nowMs, market) ? 'LIVE' : 'CLOSED'
 }
 
 /**
@@ -444,7 +497,7 @@ async function persistQuote(
   currency: CurrencyCode,
   nowMs: number,
 ): Promise<void> {
-  const status = statusForQuote(route.source, parsed.timestamp, nowMs)
+  const status = statusForQuote(route.source, parsed.timestamp, nowMs, parsed.market)
   const quote: Quote = {
     id: `q_auto_${route.source}_${instrumentId}_${parsed.timestamp.slice(0, 10)}`,
     instrumentId,

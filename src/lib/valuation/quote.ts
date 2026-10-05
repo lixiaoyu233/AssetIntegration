@@ -98,6 +98,18 @@ export function judgeQuote(
  *
  * 同一 `timestamp` 有多条时不在此处裁决 ——
  * 业务键去重已保证同 (标的, priceKind, source, 时间点) 只有一条。
+ *
+ * ## ⚠️ 迁移导入的行情不参与按时间比较
+ *
+ * 1.x 迁移导入的行情（见 `LEGACY_IMPORTED_SOURCES`）只记录了 `fetchedAt`，
+ * 迁移时被当成 2.0 的「行情时间」写进 `timestamp` —— 那其实是**抓取时刻**。
+ *
+ * 后果（真实数据里出过）：一条**今天导入的旧收盘价**带着「今天」的时间戳，
+ * 比 2.0 刚抓到的真行情（时间戳是上一个收盘时刻）还新，于是被选中；
+ * 它带着 `LIVE` 状态，超过 1 小时后**永远**判「已过期」，
+ * 而正确的行情就在库里躺着没人用。
+ *
+ * 因此它们只在**没有 2.0 自有行情**时兜底。
  */
 export function latestQuoteFor(
   quotes: Quote[],
@@ -105,10 +117,48 @@ export function latestQuoteFor(
   asOf?: string,
 ): Quote | undefined {
   const cutoff = asOf === undefined ? Number.POSITIVE_INFINITY : new Date(asOf).getTime()
+  return (
+    pickNewestQuote(quotes, instrumentId, cutoff, false) ??
+    pickNewestQuote(quotes, instrumentId, cutoff, true)
+  )
+}
+
+/**
+ * 1.x 迁移导入的行情来源（它们的时间戳是**抓取时刻**，不是行情时间）。
+ *
+ * 取值来自 1.x 的取数实现：`usStock.ts` 的 `tencent-us` / `tencent-hk`，
+ * `fundService.ts` 的 `fundmobapi` / `fundmobapiJsonp` / `push2` / `fundgz`，
+ * 以及迁移里对缺失来源的兜底值 `legacy`。
+ *
+ * 2.0 自己的来源是 `tencent` / `eastmoney-fund`（见 `quoteAutoFetch`），
+ * 名称刻意不同，因此不会误判。
+ */
+const LEGACY_IMPORTED_SOURCES = new Set([
+  'tencent-us',
+  'tencent-hk',
+  'fundmobapi',
+  'fundmobapiJsonp',
+  'push2',
+  'fundgz',
+  'legacy',
+])
+
+/**
+ * 在「是否迁移导入」这一层内取时间最新的一条。
+ *
+ * @param legacy true 只看迁移导入的行，false 只看 2.0 自有行
+ */
+function pickNewestQuote(
+  quotes: Quote[],
+  instrumentId: string,
+  cutoff: number,
+  legacy: boolean,
+): Quote | undefined {
   let best: Quote | undefined
   let bestAt = Number.NEGATIVE_INFINITY
   for (const q of quotes) {
     if (q.instrumentId !== instrumentId) continue
+    if (LEGACY_IMPORTED_SOURCES.has(q.source) !== legacy) continue
     const t = new Date(q.timestamp).getTime()
     if (!Number.isFinite(t) || t > cutoff) continue
     if (t > bestAt) {

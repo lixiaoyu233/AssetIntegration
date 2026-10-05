@@ -48,6 +48,40 @@ describe('latestQuoteFor：as-of 过滤', () => {
   })
 })
 
+/*
+ * 回归（真实数据）：1.x 迁移导入的行情**不得**压住 2.0 自己抓到的行情。
+ *
+ * 迁移把 1.x 的 `fetchedAt`（抓取时刻）当成 2.0 的「行情时间」写进了
+ * `timestamp`，于是「今天导入的周五收盘价」时间戳比 2.0 刚抓到的真行情还新，
+ * 被选中后带着 LIVE 状态、超过 1 小时 → 持仓**永远**显示「估值已过期」。
+ */
+describe('【核心】迁移导入的行情不得压住 2.0 自有行情', () => {
+  const imported: Quote = {
+    id: 'v2_quote_x', instrumentId: 'i1', priceKind: 'estimated_nav',
+    marketPrice: 90.6, estimatedNav: 90.6, currency: 'USD',
+    source: 'tencent-us', timestamp: '2026-10-05T03:39:32.132Z', status: 'LIVE',
+  }
+  const own: Quote = {
+    id: 'q_auto_tencent_i1_2026-10-02', instrumentId: 'i1', priceKind: 'market_price',
+    marketPrice: 90.6, currency: 'USD',
+    source: 'tencent', timestamp: '2026-10-02T20:00:01.000Z', status: 'CLOSED',
+  }
+
+  it('导入行时间戳更新 → 仍然取 2.0 自有行（顺序无关）', () => {
+    expect(latestQuoteFor([imported, own], 'i1')?.id).toBe(own.id)
+    expect(latestQuoteFor([own, imported], 'i1')?.id).toBe(own.id)
+  })
+
+  it('只有导入行时照常可用（兜底，不丢数据）', () => {
+    expect(latestQuoteFor([imported], 'i1')?.id).toBe(imported.id)
+  })
+
+  it('as-of 契约不变：时点之前无自有行情则 undefined', () => {
+    expect(latestQuoteFor([imported, own], 'i1', '2026-10-03T00:00:00.000Z')?.id).toBe(own.id)
+    expect(latestQuoteFor([imported, own], 'i1', '2026-10-01T00:00:00.000Z')).toBeUndefined()
+  })
+})
+
 describe('【核心】未来时间的行情不得进入更早时点的估值', () => {
   function portfolio(futureQuote: boolean): Portfolio2 {
     const base = makePortfolio({
