@@ -393,7 +393,7 @@ netWorth = openingNetWorth
 pnpm install            # 安装依赖
 pnpm dev                # 开发服务器（默认 http://localhost:5173）
 pnpm typecheck          # tsc -b --noEmit
-pnpm test               # vitest run（43 个测试文件）
+pnpm test               # vitest run（46 个测试文件 / 约 1080 条）
 pnpm build              # tsc -b && vite build → dist/
 pnpm preview            # 本地预览构建产物
 ```
@@ -409,7 +409,7 @@ pnpm preview            # 本地预览构建产物
 | --- | --- |
 | `public/favicon.svg` | 矢量稿，浏览器标签页图标 |
 | `public/icons/*.png` | 位图稿，由脚本从同一视觉稿渲染（iOS 只认 PNG） |
-| `scripts/gen-icons.cjs` | 渲染脚本：`node scripts/gen-icons.cjs`（需要 `playwright`，仅本地工具，不进依赖） |
+| `scripts/gen-icons.cjs` | 渲染脚本：`node scripts/gen-icons.cjs`（用 2.0 **自己的** `playwright` devDependency） |
 
 视觉语义：**三根青→靛蓝的层叠上升柱 + 底部聚合底盘 + 顶端金色圆点**
 （= 多个来源汇总成一个数），底板深墨蓝 `#070b14`。
@@ -582,6 +582,41 @@ IndexedDB，并调用 `setReadOnlyMode(true)` 把 **1.0 界面变成只读**。
 > **改这一块时的红线**：不要让 2.0 读写 `asset-card-wallet/*`。
 > `legacyStore.ts` 里的读取器与 `removeLegacyData()` 是给 1.x 迁移场景用的，
 > 在本产品里**不应被调用**。
+
+### 本地文件 / 仓库层面的隔离（已完全分开）
+
+| 项 | 1.0 | 2.0 |
+| --- | --- | --- |
+| 本地目录 | `~/Documents/WealthCard` | `~/Documents/AssetIntegration` |
+| 依赖 | 各自 `pnpm install`，**互不共用 `node_modules`** | 同左 |
+| E2E 浏览器缓存 | 各自 `.cache/ms-playwright` | 同左 |
+| Git remote | `lixiaoyu233/WealthCard` | `lixiaoyu233/AssetIntegration` |
+
+> ⚠️ 这两条**曾经是共用的**：2.0 用 `node_modules` 软链复用 1.0 的依赖，
+> E2E 的浏览器缓存与 `playwright` 也指向 1.0 目录。
+> 2026-10-05，1.0 切回 v1.0.0 工作树并重装依赖（1.0 的依赖集里没有
+> `dexie` / `fake-indexeddb`），2.0 立刻无法类型检查、无法构建、测试全挂。
+> 现已各自独立：`playwright` 是 2.0 自己的 devDependency，
+> 浏览器在 2.0 自己的 `.cache/` 下。
+
+### ⚠️ 唯一无法靠代码消除的耦合：**同一个 origin**
+
+两个站点都在 `lixiaoyu233.github.io` 下。而 **`localStorage` 与 `IndexedDB`
+按 origin 隔离、不按路径隔离** —— 浏览器层面这两个产品**天生共用一份存储**。
+代码能做的只有「约定不碰对方的键」，做不到物理隔离。
+
+已做到的：
+- 键 / 库名分开（`asset-card-wallet/*` vs `wealthcard`）；
+- PWA `id` 分开（`/WealthCard/` vs `/AssetIntegration/`）；
+- 启动迁移默认关闭（`readLegacyData` 默认 `false`，见上方事故记录）。
+
+**要做到零风险，只能换 origin**，三选一：
+1. 给 2.0 挂自定义域名（GitHub Pages 支持）；
+2. 把 2.0 部署到别的托管（Cloudflare Pages / Vercel / Netlify）；
+3. 换一个 GitHub 账号或组织，用 `<org>.github.io`。
+
+在换之前，请把「**不要把 2.0 的构建部署到 1.0 的 URL 下**」当作硬约束 ——
+2026-10-05 那次数据被迁移的事故就是这么发生的。
 
 ---
 

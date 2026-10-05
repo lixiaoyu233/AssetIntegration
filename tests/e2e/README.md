@@ -24,13 +24,19 @@
 
 ```bash
 cd <项目根>
-pnpm install           # 或用软链复用已有依赖
+pnpm install           # 装本仓库**自己的**依赖（playwright 也在其中）
 ```
 
-Playwright 浏览器（若提示缺失）：
+Playwright 浏览器缓存在**本仓库自己的** `.cache/ms-playwright`（已在 `.gitignore` 中）。
+若提示缺失（换机器、清过缓存）：
+
 ```bash
-export PLAYWRIGHT_BROWSERS_PATH=<项目>/.cache/ms-playwright
+pnpm exec playwright install chromium
 ```
+
+⚠️ **不要复用其它项目（尤其 1.0 `WealthCard`）的 `node_modules` 或浏览器缓存。**
+两者依赖集不同（1.0 没有 `dexie` / `fake-indexeddb`），共用会让本项目无法
+类型检查 / 构建 —— 2026-10-05 就这么坏过一次。
 
 ### 2. 构建并起本地服务
 
