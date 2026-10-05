@@ -1,579 +1,533 @@
-# WealthCard
+# 资产整合 · AssetIntegration
 
-> 资产卡包 · 一个**纯前端、零后端**的个人资产归集表与再平衡工具。
+> **本地优先（local-first）、隐私优先、纯静态**的个人资产归集与账本工具。
+> 所有业务数据只保存在你自己的浏览器 **IndexedDB** 里，**没有任何后端、没有登录、没有云同步**。
 
-所有数据只保存在你自己的浏览器 `localStorage` 里，不上传任何服务器；支持基金实时估值自动同步、红涨绿跌的盈亏展示、投资策略与再平衡建议，可直接一键部署到 GitHub Pages。
-
-```
-暗黑模式 · 移动端优先（PC 居中 480px）· 数据本地持久化 · 基金实时估值 · 策略再平衡
-```
-
-```bash
-git clone https://github.com/<你的用户名>/WealthCard.git
-cd WealthCard
-pnpm install && pnpm dev
-```
-
----
-
-## ✨ 功能一览
-
-| 模块 | 说明 |
+| 项 | 值 |
 | --- | --- |
-| 净资产总览 | 顶部显示「资产卡包 / 净资产 CNY / 大字号总额」，并展示较上一次快照的变化；数据不足时显示「暂无历史变化」 |
-| 资产卡片 | 垂直堆叠卡片，左侧彩色半透明图标 + 分类名 + 副标题，右侧金额 + 项数标签（`3项` / `1只` / `2笔`） |
-| 默认分类 | 现金与固定资产（银行 / 房产 / 现金）、股票（全球市场 / 场内基金）、基金（场外基金 / 持仓 / 净值）、黄金（银行积存金 / 平台 / 克数）、负债（房贷 / 信用卡 / 消费贷） |
-| 增删改查 | 点击卡片打开底部详情面板，可添加 / 编辑 / 删除条目，卡片可上下排序、可改名换图标换主题色、可删除或新建分类 |
-| 基金实时估值 | 录入基金代码 + 持有份额 + 成本单价，自动拉取最新净值 / 盘中估值，计算市值与浮动盈亏并按红涨绿跌高亮 |
-| **投资策略与再平衡** | 内置全天候 / 永久组合 / 经典 60/40，支持自定义策略；自动把资产分类映射到策略资产类别，算出实际占比、偏离度、总偏离率与组合健康度，并给出「卖多少 / 买多少」的具体金额建议 |
-| **基金申购资金划拨** | 买入基金时可选「从现有项目划拨」：基金 +X、所选现金项 −X，净资产不变，并在持仓上记录资金来源 |
-| **总资产月度走势** | 每月第一次打开时把上月定稿，记录总资产/负债/净资产；与薪资合并为一个「走势」面板，可切指标与时间范围 |
-| **薪资记录** | 记录每月薪资（年月 + 金额）、可选主界面薪资走势柱状图；固定薪资可设发薪日，到点自动写入指定现金项且不会重复入账 |
-| **手动净值兜底** | 基金 / 持仓支持手动填写当前净值：代码搜不到或数据源不可用时，填上净值照样算市值与盈亏（手动值优先，清空后恢复自动同步） |
-| **美股 / 港股持仓** | 「股票」分类可切换「直接记金额 / 持仓」，登记 SPY、QQQ 等美股 ETF 或 00700 等港股，自动同步行情；美股按 USD、港股按 HKD 计价并折算人民币 |
-| **多币种** | 支持人民币 / 美元 / 港币 / 新加坡元 / 日元等 10 种常用币种；金额按原币记账，汇总时用实时汇率折算成人民币，卡片与明细双行显示原币与折算值 |
-| **金额量级提示** | 数字键盘与输入框会标出「千 / 万 / 十万 / 百万 / 千万」，避免数错零 |
-| **双主题** | 默认跟随系统（iOS 的日落自动切换也能响应），也可手动固定日间 / 夜间；选择持久化，首屏有防闪白处理 |
-| **可添加到主屏幕（PWA）** | iOS Safari「分享 → 添加到主屏幕」后全屏无地址栏打开，有独立图标与名称；Android/桌面浏览器会提示安装 |
-| 数据持久化 | 每次改动立即写入 `localStorage`，刷新 / 关掉浏览器都不丢；支持导出 / 导入 JSON 备份 |
-| 隐私 | 无账号、无埋点、无后端，可离线打开（仅基金估值需要联网） |
+| 产品名 | 资产整合 |
+| 英文名 | AssetIntegration |
+| 线上地址 | https://lixiaoyu233.github.io/AssetIntegration/ |
+| 数据事实源 | IndexedDB（Dexie），库名 `wealthcard` |
+| Portfolio Schema | `PORTFOLIO_SCHEMA_VERSION = 8` |
+| IndexedDB 版本 | `DB_VERSION = 2` |
+| 部署形态 | GitHub Pages 静态站点（无服务端） |
+
+> ⚠️ **这是与 1.0（`WealthCard`）并存的独立产品。** 两者同源但**互不读取、互不迁移、互不覆盖**。详见 [§9 与 1.0 的关系](#9-与-10-wealthcard-的关系)。
 
 ---
 
-## 📸 界面预览
+## 1. 十五分钟读懂：这套系统的中心思想
 
-> 仓库里 `screenshots/` 目录默认被 `.gitignore` 忽略（避免把验证产物提交上去）。
-> 如果想在 README 里内嵌截图，删掉 `.gitignore` 中的 `screenshots` 一行即可。
-
-| 首页与资产卡片 | 基金详情与盈亏 |
-| --- | --- |
-| ![home](screenshots/01-home.png) | ![fund](screenshots/02-fund-detail.png) |
-
-| 策略配置与再平衡 | 再平衡建议明细 |
-| --- | --- |
-| ![strategy](screenshots/strategy-01-card.png) | ![advice](screenshots/strategy-02-expanded.png) |
-
----
-
-## 🧱 技术栈
-
-- **Vite 5** + **React 18** + **TypeScript 5**（严格模式）
-- **Tailwind CSS 3**（自定义暗色卡片样式、`rounded-card` 等）
-- **Lucide React** 图标
-- **Recharts** 绘制「目标占比 vs 实际占比」对比图（懒加载，不拖慢首屏）
-- **CSS 变量 + Tailwind 语义色**实现双主题（不用重写组件，只换 token）
-- **PWA**：`manifest.webmanifest` + iOS 专属 meta + 脚本生成的 PNG 图标
-- **localStorage** 作为唯一数据源（带 Schema 规范化与损坏数据自愈）
-- **Vitest** 单元测试 + 真实接口集成测试
-
----
-
-## 🚀 本地开发
-
-需要 **Node.js ≥ 22.13**（pnpm 11 依赖 `node:sqlite`，Node 20 会报 `ERR_UNKNOWN_BUILTIN_MODULE`）。仓库里提交的是 `pnpm-lock.yaml`，因此默认用 **pnpm**（npm 同样可用，只是没有锁定文件）。
-
-```bash
-# 1. 安装依赖
-pnpm install
-
-# 2. 启动开发服务器（默认 http://localhost:5173）
-pnpm dev
-
-# 3. 生产构建（输出到 dist/）
-pnpm build
-
-# 4. 本地预览构建产物（默认 http://localhost:4173）
-pnpm preview
-```
-
-喜欢用 npm 的话，把 `pnpm xxx` 换成 `npm run xxx`、`pnpm install` 换成 `npm install` 即可。
-
-其他脚本：
-
-```bash
-pnpm typecheck   # TypeScript 类型检查（tsc -b）
-pnpm test        # 单元测试 + 联网接口测试（离线会自动跳过联网用例）
-pnpm test:api    # 只跑真实基金接口集成测试
-ACW_SKIP_API=1 pnpm test   # 强制离线，跳过所有联网用例
-```
-
----
-
-## 📦 部署到 GitHub Pages
-
-### 方式一（推荐）：GitHub Actions 自动部署
-
-1. 在 GitHub 新建仓库（建议命名 **WealthCard**），把本项目推送到 `main` 分支：
-
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: 资产卡包"
-   git branch -M main
-   git remote add origin git@github.com:<你的用户名>/<仓库名>.git
-   git push -u origin main
-   ```
-
-2. 打开仓库 **Settings → Pages**，把 **Source** 设为 **GitHub Actions**。
-
-3. 之后每次推送到 `main`，`.github/workflows/deploy.yml` 会自动执行
-   `pnpm install --frozen-lockfile → typecheck → test → build → 上传 dist → 发布 Pages`。
-
-4. 发布完成后访问 `https://<你的用户名>.github.io/<仓库名>/` 即可。
-
-> 子路径无需任何额外配置：`vite.config.ts` 里已设置 `base: './'`，产物全部使用相对路径，放在仓库子路径下也能正确加载。
-
-### 方式二：手动构建后上传
-
-```bash
-pnpm build
-# 把 dist/ 目录内容（含 .nojekyll）推到 gh-pages 分支或任意静态托管
-touch dist/.nojekyll   # 需要时避免 Jekyll 忽略下划线开头的资源
-```
-
----
-
-## 🗂 目录结构
+一句话：**把「发生过的事实」和「由事实算出来的东西」严格分开。**
 
 ```
-WealthCard/
-├─ .github/workflows/deploy.yml   # GitHub Pages 自动部署
-├─ public/
-│  ├─ favicon.svg
-│  ├─ manifest.webmanifest        # PWA 清单
-│  └─ icons/                      # 桌面图标（脚本生成，含 maskable）
-├─ scripts/gen-icons.cjs          # 用 Chromium 生成 PNG 图标
-├─ src/
-│  ├─ App.tsx                     # 页面装配：顶部总览 + 卡片列表 + 弹窗
-│  ├─ components/
-│  │  ├─ Header.tsx               # 净资产总览区
-│  │  ├─ CategoryCard.tsx         # 资产分类卡片
-│  │  ├─ DetailSheet.tsx          # 分类详情 / 条目列表
-│  │  ├─ ItemForm.tsx             # 条目表单（金额 / 基金 / 黄金）
-│  │  ├─ CategoryForm.tsx         # 新增 / 编辑分类
-│  │  ├─ Sheet.tsx                # 底部弹出面板（移动端风格）
-│  │  ├─ NumberPad.tsx            # 自研数字键盘
-│  │  ├─ ConfirmDialog.tsx        # 二次确认
-│  │  ├─ StrategyCard.tsx         # 策略配置 / 再平衡建议卡片
-│  │  ├─ AllocationChart.tsx      # 占比对比图（懒加载 recharts）
-│  │  ├─ StrategySettingsSheet.tsx# 策略设置面板（策略/阈值/映射/自定义）
-│  │  └─ Toast.tsx                # 轻提示
-│  ├─ hooks/
-│  │  ├─ usePortfolio.ts          # 状态 + 持久化 + 行情同步（reducer）
-│  │  ├─ useStrategy.ts           # 策略配置持久化 + 再平衡结果
-│  │  └─ useTheme.ts              # 主题（跟随系统 / 日间 / 夜间）
-│  ├─ lib/
-│  │  ├─ calc.ts                  # 估值 / 汇总 / 数值解析 / 基金类型识别（纯函数）
-│  │  ├─ currency.ts              # 币种表、量级提示、汇率换算（纯函数）
-│  │  ├─ fx.ts                    # 汇率服务：双接口降级 + 24h 缓存
-│  │  ├─ strategies.ts            # 内置策略定义、默认映射、策略校验
-│  │  ├─ rebalance.ts             # 再平衡引擎（纯函数，可单测）
-│  │  ├─ fundService.ts           # 基金行情多通道降级服务
-│  │  ├─ jsonp.ts                 # JSONP 加载器（超时 / 清理 / 并发安全）
-│  │  ├─ storage.ts               # localStorage 读写与脏数据规范化
-│  │  ├─ format.ts                # 金额 / 净值 / 百分比格式化
-│  │  ├─ defaults.ts              # 默认分类与主题色
-│  │  └─ icons.ts                 # lucide 图标白名单
-│  └─ types/
-│     ├─ asset.ts                 # 资产数据模型
-│     └─ strategy.ts              # 策略 / 映射 / 再平衡结果模型
-├─ tailwind.config.js
-├─ vite.config.ts                 # base: './' + 开发代理
-└─ README.md
+Transaction（交易流水）   ← 唯一事实源。用户录入，只增不改（只能作废）
+        │
+        │  deriveLedgerEffects()  纯函数派生
+        ▼
+Ledger Effects（账本效果）  ← 每笔交易在「标的腿 / 现金腿」上产生的增量
+        │
+        │  rebuildFromLedger()  可重复执行
+        ▼
+Holdings（持仓缓存）      ← 【可重建】不是事实，删了能重算出来
+        │
+        │  valuateHolding()  读行情 / 汇率
+        ▼
+Valuation（估值）         ← 每个持仓的可靠值 / 不可用 / 过期
+        │
+        ├──► Snapshot（每日快照）  ← 把「当天的事实」冻结存档，此后永不改写
+        │
+        ├──► Analysis（分析）      ← 六维度切分（类别/账户/账户类型/币种/地区/工具）
+        │
+        └──► History（历史趋势）    ← 只读已落盘的 Snapshot，不重算、不插值
 ```
+
+**核心推论（改代码前必须理解）**
+
+1. **只有 `Transaction` 是事实。** `Holding` 是缓存 —— 任何时候都能从交易重放得到。
+   因此**不要**为了修一个数字去直接改 `Holding`；要改就改交易（或新增交易）。
+2. **历史快照不可回溯改写。** 一旦某天的 `Snapshot` 落盘，之后无论行情/汇率/分类怎么变，
+   那天的数字**都不变**。这是「历史可信」的前提。
+3. **不可估值 ≠ 价值为 0。** 拿不到行情/汇率时，字段写 `undefined` 并标 `unreliable`，
+   **绝不写 0 或 1**。
+4. **禁止假成功。** UI 的成功提示必须出现在 Domain 真正写入之后。
 
 ---
 
-## 🧮 数据模型与计算口径
+## 2. 目录结构
 
-```ts
-Category   { id, name, subtitle, icon, color, isLiability, items[] }
-AmountItem { kind: 'amount', name, amount }                       // 直接录金额
-FundItem   { kind: 'fund', code, shares, costNav, quote? }        // 代码 + 份额 + 成本价
-GoldItem   { kind: 'gold', name, grams, pricePerGram }            // 克数 + 单价
-Portfolio  { version, categories[], history[], lastSyncedAt? }
+```
+src/
+├── types/
+│   └── portfolio2.ts          # ★ 全部数据模型（Account / Instrument / Holding /
+│                              #   Transaction / Quote / FxRate / Snapshot …）+ 不变量注释
+├── lib/
+│   ├── db/                    # 数据层
+│   │   ├── dexie.ts           #   Dexie 表与索引定义（★ 改索引要动 DB_VERSION）
+│   │   ├── schema.ts          #   Schema 版本常量 + 迁移链定义
+│   │   ├── migrations/        #   V2→V3→V4→V5→V6→V7→V8 迁移链 + verify.ts
+│   │   ├── repository.ts      #   ★ 仓储**接口**（Domain 只依赖接口，不依赖 Dexie）
+│   │   ├── dexieRepository.ts #   Dexie 实现 + 内存实现（测试用）
+│   │   ├── backup.ts          #   导出 / 校验 / 恢复 / 回滚
+│   │   ├── creation.ts        #   冷启动创建（账户 / 标的 / 手动持仓）
+│   │   └── legacyStore.ts     #   1.x localStorage 读取器（本产品**不调用**，见 §9）
+│   ├── ledger/                # 账本层（事实 → 效果 → 持仓）
+│   │   ├── types.ts           #   ★ TRANSACTION_SEMANTICS：10 种交易类型的语义表
+│   │   ├── derive.ts          #   ★ deriveLedgerEffects / deriveLedger（纯函数）
+│   │   ├── rebuild.ts         #   从 Ledger 重建 Holdings
+│   │   ├── reconcile.ts       #   账实校验（一致性诊断）
+│   │   ├── transactionService.ts # ★ 记账 / 作废的唯一写入口
+│   │   ├── cashConversion.ts  #   现金口径转换
+│   │   ├── duplicates.ts      #   重复持仓检测
+│   │   └── lifecycle.ts       #   POSTED / VOIDED
+│   ├── valuation/             # 估值层
+│   │   ├── engine.ts          #   ★ 六步估值流程 + calculateTotals
+│   │   ├── quote.ts           #   行情选取（含 as-of 语义）
+│   │   ├── fx.ts              #   汇率解析（缺汇率绝不 1:1）
+│   │   ├── policy.ts          #   ★ 报价新鲜度策略（LIVE 1h / DELAYED 1d / CLOSED ∞ …）
+│   │   ├── basis.ts           #   估值依据（给 UI 展示「这个数怎么来的」）
+│   │   └── priceService.ts    #   手动行情 / 汇率录入
+│   ├── performance/           # 快照与归因
+│   │   ├── snapshot.ts        #   ★ buildSnapshot / captureSnapshot（含日期守卫）
+│   │   ├── dailySnapshot.ts   #   每日快照的幂等与崩溃恢复
+│   │   ├── attribution.ts     #   归因恒等式与 openingGapDays
+│   │   ├── history.ts         #   趋势与资产构成
+│   │   ├── cashflow.ts        #   现金流分类
+│   │   └── basisView.ts       #   历史估值依据的展示转换
+│   ├── analysis/              # 六维度分析 + 覆盖率
+│   └── portfolio/
+│       └── liability.ts       # ★ 负债判定的**唯一入口** decideLiability()
+├── pages/                     # 五个 Tab：首页 / 资产 / 分析 / 历史 / 设置
+├── components/                # 各 Sheet（录入 / 确认 / 备份 …）
+└── hooks/usePortfolio2.ts     # ★ 唯一的派生入口 loadPortfolio2()
 ```
 
-计算口径：
+**分层依赖方向（不要反向）**
 
-- **基金市值** = 当前净值 × 持有份额；当前净值优先取**盘中估算净值（GSZ）**，无则回退**最新公布单位净值（NAV）**
-- **基金盈亏** = 市值 −（成本单价 × 份额），盈亏比例 = 盈亏 ÷ 成本
-- **黄金市值** = 克数 × 计价单价
-- **分类合计** = 分类内条目市值之和；勾选「计入负债」的分类按绝对值计入负债
-- **净资产** = 总资产 − 总负债
-- 颜色遵循 A 股习惯：**红涨绿跌**
-- 数据不足时基金以成本兜底，保证净资产不会因为还没联网而虚低 / 虚高
+```
+types ← 所有层
+db（仓储）        ← ledger / valuation / performance
+ledger / valuation ← performance / analysis
+performance / analysis ← pages / components
+```
 
-`history` 会每天记录一条净资产快照（最多保留 120 条），用于顶部的「较上次变化」提示。
+`pages` / `components` **不得**直接操作 Dexie，必须走 `PortfolioRepository`。
 
 ---
 
-## ⚙️ 设置（基金申购 / 薪资）
+## 3. 数据层
 
-顶部右上角的齿轮进入设置。设置采用**三级菜单**：先选要改什么，再进具体页面（左上角可返回）。
+### 3.1 表与索引（`src/lib/db/dexie.ts`）
 
-```
-设置
-├─ 股票基金申购方式   ← 直接添加 / 从现金项目划拨
-├─ 薪资               ← 每月记录、固定发薪、写入现金项
-└─ 走势图             ← 是否显示、展示哪些指标、图上显示什么
-```
-
-每个菜单项右侧直接显示当前状态（如「直接添加」「3 个月记录」「已开启 · 2 项」），不用进去就能看出配置。
-所有开关都是**整行可点**的滑块，并带「已开启 / 已关闭」文字，避免看不出状态。
-
-### 基金申购
-
-| 方式 | 行为 |
-| --- | --- |
-| 直接添加 | 只增加基金持仓，现金余额不变 |
-| **从现有项目划拨** | 基金 +X，所选现金项目 −X，**净资产不变**（钱从现金变成基金） |
-
-- 申购方式与默认扣款项目在**设置 → 股票基金申购方式**里配置；
-  支持的对象是**基金 + 美股/港股持仓**（境内基金、美股 ETF、港股同一套持仓结构）
-- 可在设置里选定**默认扣款项目**，添加持仓时自动带出（每次仍可临时改）
-- 基金条目上会记录资金来源（项目名 + 划拨金额），编辑时只作说明
-- 可选项目只包含**金额类且余额为正**的条目，排除负债分类与基金/黄金这类投资品本身
-- **余额不足会拦截提交**并提示可用金额，不会写出半截数据
-- 实现上是一次原子 reducer 动作（`addFundedItem`）：分两次 dispatch 会渲染出「两处都还是旧值」的中间态，快速刷新可能把中间态写进 localStorage
-
-### 薪资
-
-- **本月薪资**：只记录年月与金额，存档后可回看；改金额会把该月标记为「未入账」
-- **手动写入**：点「写入现金项」把该月薪资加到指定项目
-- **固定薪资**：填一次金额 + 发薪日（1~28）+ 目标项目，之后每月到发薪日自动入账
-- **走势面板**：默认关闭。开关与「展示哪些指标」「默认时间范围」「图上显示什么」
-  都在**设置 → 走势图**里配置；卡片内只做指标切换，不再堆配置项
-
-**不重复入账是怎么保证的**：每月记录带 `applied` 标记，写入成功的同时把该月记录标记为已入账；
-入账本身也做了幂等判断（已入账直接跳过）。发薪日限制在 1~28，避免 29~31 在小月不存在。
-
----
-
-## 📉 走势面板（总资产 / 负债 / 薪资）
-
-设置里一个开关控制，主界面显示一张「走势」卡片，内部可切四个指标与四档时间范围。
-
-### 数据怎么存的
-
-**按月聚合，不是按天**——按天存一年就是 365 条，几年后 localStorage 会明显拖慢启动；按月 10 年也才 120 条。
-
-每个月一条记录，存**三个值**（都按当前口径，含外币折算与负债开关）：
-
-```ts
-{ month: '2026-10', assets, liabilities, netWorth, final, finalizedAt? }
-```
-
-推进规则：
-
-| 时机 | 行为 |
-| --- | --- |
-| 数据一变动 | 更新**当月**那条（`final: false`），所以图上一直跟到最新 |
-| 每月第一次打开 | 把**上个月**定稿（`final: true`），此后不再被改写 |
-| 整月没打开 | 用上一个定稿值**逐月补齐**，曲线不断层 |
-| 保留 | 永久保留，不自动清理 |
-
-「当月」在图上显示为最后一个点并标注，历史点定稿后不会被后续变动影响。
-
-### 个性化
-
-- 指标切换：净资产 / 总资产 / 负债 / 薪资
-- 时间范围：近 6 月 / 近 1 年 / 近 3 年 / 全部
-- 点按数据点看该月明细（总资产、负债、净资产）
-- 点上显示数值、环比（较上期）、区间统计（累计变化 / 最高 / 最低）
-- 涨绿跌红：整条线按区间涨跌变色
-- 薪资**不补月份**，只画真实填过的月份（和资产的数据来源不同）
-
----
-
-## 📈 美股 / 港股持仓
-
-「股票」分类点「添加条目」后，顶部可以选记录方式：
-
-- **直接记金额**：只登记当前市值（最简单的记账方式）
-- **持仓（自动同步行情）**：填代码 + 股数 + 成本单价，自动同步行情并算盈亏；
-  代码搜不到时可在「当前净值 / 现价（手动）」里自己填，市值与盈亏照常计算
-
-「基金」分类同样有这两个标签页（有些基金只想记个总额，不想填代码）。
-
-支持的代码：
-
-| 市场 | 代码形式 | 示例 | 计价 |
-| --- | --- | --- | --- |
-| 境内场外基金 | 6 位数字 | `161725` | CNY |
-| 美股 / 美股 ETF | 1~6 位字母 | `SPY`、`QQQ`、`VOO`、`BRK.B` | USD |
-| 港股 | 1~5 位数字 | `00700`（填 `700` 会自动补零） | HKD |
-
-**行情来源**：`qt.gtimg.cn`（腾讯行情）。实测它带 `Access-Control-Allow-Origin: *`，浏览器可直连，
-支持一次批量查询多只；返回体是 **GBK** 编码的 JS 赋值语句，需要按 GBK 解码后解析。
-
-字段索引（美股与港股一致，已逐项核对）：`[1]` 名称、`[3]` 现价、`[4]` 昨收、`[30]` 行情时间、`[31]` 涨跌额、`[32]` 涨跌幅（百分数）。
-
-> 试过但不可用：新浪 `hq.sinajs.cn` 没有 CORS 头，浏览器直连会被拦，因此没有采用。
-
-**计价与折算**：美股按 USD、港股按 HKD，再用现有汇率折算成人民币——
-所以美股持仓的人民币市值会随汇率波动，和美元存款的口径一致。盈亏也按同一汇率折算，不会被汇率放大或缩小。
-
----
-
-## 💱 多币种与汇率
-
-支持 **10 种常用币种**：人民币、美元、港币、新加坡元、日元、欧元、英镑、澳元、韩元、新台币、加元。
-
-**记账口径**：条目按**原币**存储，汇总时按实时汇率折算成人民币。因此汇率变动时，总资产会自动跟着变——
-这也是外币资产的真实人民币价值。基金是境内人民币净值，不提供币种切换。
-
-**汇率来源**（双通道降级，都免密钥、都带 CORS）：
-
-| 通道 | 地址 | 说明 |
+| 表 | 索引 | 说明 |
 | --- | --- | --- |
-| 主 | `open.er-api.com/v6/latest/CNY` | 166 个币种，每日更新，返回体自带更新时间 |
-| 备 | `cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cny.json` | 主接口不可用时自动切换 |
+| `accounts` | `id, type, region, isLiability` | |
+| `instruments` | `id, symbol, instrumentType, assetClass, currency, region, classificationStatus` | |
+| `holdings` | `id, accountId, instrumentId, valuationMode` | ⚠️ **没有** `&[accountId+instrumentId]` 唯一索引（刻意的，见下） |
+| `transactions` | `id, accountId, instrumentId, type, timestamp, [accountId+timestamp]` | |
+| `quotes` | `id, instrumentId, status, timestamp, [instrumentId+timestamp]` | |
+| `fxRates` | `id, baseCurrency, quoteCurrency, status, timestamp, [baseCurrency+quoteCurrency]` | |
+| `snapshots` | `id, &date, createdAt` | **`&date` 是唯一索引**：一天只能有一条快照 |
+| `allocationProfiles` | `id, name` | |
+| `meta` | `key` | 操作状态（迁移记录、快照 attempt），**不是业务事实** |
+| `classificationAudit` | `id, instrumentId, at, action` | 分类变更审计 |
 
-实测淘汰的接口：`api.frankfurter.app`（301 跳转）、`api.exchange rate.host`（现强制要 API Key）。
+> ⚠️ **绝不要给 `holdings` 加 `&[accountId+instrumentId]` 唯一索引。**
+> 存量数据（尤其 1.x 迁移来的）可能有重复持仓，加唯一索引会让 Dexie 升级直接抛错 →
+> **数据库打不开**。重复持仓由 `duplicates.ts` 检测并由用户自行处理。
 
-**更新与降级策略**：
+### 3.2 版本与迁移
 
-- 缓存 **24 小时**，未过期不发请求；点顶部刷新按钮会强制刷新汇率；
-- 拉不到就用上次缓存的汇率，界面标注「汇率更新于 …」并提示可能过期；
-- 从没取到过汇率时，外币条目会按原币数值计入，并**明确提示「汇率不可用」**——
-  不会静默当成 0 或人民币，避免把错数字当成真资产。
+```
+LEGACY_PORTFOLIO_VERSION = 2      // 1.x 的存储版本
+PORTFOLIO_SCHEMA_VERSION = 8      // 当前 Schema
+DB_VERSION               = 2      // Dexie 版本（2 即 dexie 的 version(2)）
+```
 
-数据存在 `localStorage` 的 `asset-card-wallet/fx`，只保存我们支持的币种（不把 160 多个汇率全塞进去）。
+迁移链（每一步在 `meta` 里各留一条 `MigrationRecord`）：
 
-## 🏛 国债分类
+```
+Legacy V2 → V3 → V4 → V5 → V6 → V7 → V8
+            │      │      │      │      └─ historical-facts（W8：快照依据字段）
+            │      │      │      └─ nullable-valuation（快照金额字段可缺失）
+            │      │      └─ transaction-status（POSTED/VOIDED）
+            │      └─ capture-kind（快照来源标记）
+            └─ asset-class-at-capture（捕获当时的分类）
+```
 
-默认分类里的「国债」（`cat_bond`）用于登记中国国债、美国 10 年期国债这类品种，提示词已按此定制。
-在再平衡里它默认对应「长期国债」（永久组合）或「中期国债」（全天候）或「债券」（60/40）。
+**改 Schema 的规则**
 
-**版本升级兼容**：老用户的数据里没有这个分类，加载时会自动补上并插到「黄金」之后；
-你已有的分类名称、图标、颜色、排序以及**手动改过的策略映射都不会被覆盖**（有单测覆盖）。
+1. 只加**可选**字段，**零填充**（不给历史数据猜值）。
+2. 提升 `PORTFOLIO_SCHEMA_VERSION`，并新建 `migrations/schema-vN-to-vN+1.ts`，
+   在 `migrations/index.ts` 的迁移链里注册。
+3. 只有**加表 / 加索引**才需要提升 `DB_VERSION`。
+4. **不要回填历史事实** —— 缺失就保持 `undefined`，含义是「无法追溯」，不是「值为 0」。
 
-## 📲 添加到主屏幕（PWA）
+### 3.3 仓储接口
 
-#
+Domain 层只依赖 `PortfolioRepository`（`src/lib/db/repository.ts`），有两个实现：
+`createDexieRepository()`（生产）与 `createInMemoryRepository()`（测试）。
+**测试几乎全部用内存实现**，因此又快又能断言内部状态。
 
-### 内置策略
+```ts
+repo.loadPortfolio()                // 一次性读出估值/分析所需全部数据
+repo.replaceAll(portfolio, opts?)   // ⚠️ 全量替换：单事务 clear + bulkPut
+repo.clearAll()                     // 全清
+```
 
-| 策略 | 目标比例 |
+`replaceAll()` 在**一个 Dexie 事务**内先 `clear()` 再 `bulkPut()`，默认清理 9 张表：
+
+```
+accounts · instruments · holdings · transactions · quotes · fxRates
+snapshots · allocationProfiles · classificationAudit（options.replaceAudit !== false 时）
+```
+
+`meta` 表**默认不动**（迁移记录必须保留）；只有显式传 `options.metaKv` 才会一并替换。
+
+> ⚠️ `replaceAll()` **不是「导入」原语**。它是「先清空再写入」——
+> 事务原子性只保证「不产生半套数据」，**不保证不丢数据**。
+> 恢复流程必须走 `backup.ts` 的「校验 → dry-run → 暂存备份 → 原子切换」。
+
+---
+
+## 4. 账本层：事实如何变成持仓
+
+### 4.1 十种交易类型（`src/lib/ledger/types.ts` 的 `TRANSACTION_SEMANTICS`）
+
+| 类型 | 数量语义 | 成本语义 | 现金流 | 说明 |
+| --- | --- | --- | --- | --- |
+| `adjustment` | `set` | `set` | 无 | **期初余额**（不是增量！见下） |
+| `buy` | delta | 增加 | 出 | |
+| `sell` | delta | 按均价结转 | 入 | |
+| `deposit` | 无 | 无 | 入（**外部**） | |
+| `withdraw` | 无 | 无 | 出（**外部**） | |
+| `dividend` | 无 | 不变 | 入 | 收益，不动成本 |
+| `interest` | 无 | 不变 | 入 | 同上 |
+| `fee` | 无 | 无 | 出 | |
+| `transfer` | 账户间移动 | 按均价平移 | **无**（内部） | |
+| `exchange` | 换汇两腿 | 无 | **无**（内部） | |
+
+**`adjustment` 是 `set`（设定），不是 delta（增量）。**
+它在派生时**先于所有 delta 无条件落地**（忽略日期顺序），
+因此它的语义是「期初基线」，而不是「某天的余额修正」。
+`recordTransaction` 会先做内存试算，任何领域 issue 都会**拒绝写入**。
+
+### 4.2 派生过程（`derive.ts`）
+
+```
+deriveLedgerEffects(txs, { instrumentCurrency, isConfirmedCash })
+  ├─ 过滤 VOIDED（唯一入口，下游不用再过滤）
+  ├─ 排序：时间升序；同一时间 adjustment 优先
+  ├─ 第一遍：落地所有 adjustment 的 set
+  └─ 第二遍：按时间应用所有 delta（buy/sell/deposit/…/transfer）
+```
+
+`deriveLedger()` 在此之上再算出每个 `(accountId, instrumentId)` 的
+`quantity / costBasis / averageCost / realizedPnl / income / fees`。
+
+### 4.3 重建与账实校验
+
+- `rebuildHoldingsFromTransactions()` —— 从 Ledger 重建 `holdings`。
+  会**原样保留** `manual` 口径持仓与孤立持仓。
+- `reconcileHoldings()` —— 账实一致性诊断，失败则**拒绝写入**。
+
+**写入路径的完整顺序**（`transactionService.recordTransaction`）：
+
+```
+1 读取当前事实（repo.loadPortfolio）
+2 前置校验（validateTransactionInput）
+3 解析划转数量（transferQuantity）
+4 构造交易 + 内存试算（deriveLedger）
+5 领域 issue 一律拒绝
+6 重复持仓检测
+  ← 手动持仓冲突检测（同一 (账户,标的) 不能既有 manual 又有派生持仓）
+7 重建持仓缓存
+  ← 重建产物唯一性校验（发现重复键即拒绝写入）
+8 reconcile 账实校验
+9 全部通过才 repo.replaceAll(next)   ← 写入是**全有或全无**
+```
+
+### 4.4 作废（VOID）而非删除
+
+`Transaction` **永不物理删除**。修正方式是「作废」：只改 `status = 'VOIDED'`。
+`voidTransaction()` 会：
+
+1. 试算并拒绝任何 issue；2. 终态负数检查；3. 清理「因本次作废失去最后依据」的持仓
+（`droppedOrphans`）；4. 重建 + 对账；5. 整体写入。
+
+> ⚠️ 作废「期初 `adjustment`」会让该持仓失去全部依据而被清理。
+> `inspectVoidImpact()` 提供**只读预检**，UI 必须在确认前明确告知用户，
+> 并给用户可操作的补救入口（补录为手动持仓）。
+
+---
+
+## 5. 估值层
+
+### 5.1 六步流程（`engine.ts`）
+
+```
+Holding → Instrument → Quote → 原币价值 → FX → CNY
+```
+
+任一步无法可靠完成 → 返回 `unavailable` 或 `stale`，**绝不用 0 / 1 代替**。
+
+### 5.2 估值状态
+
+| 状态 | 含义 | 是否计入可靠总额 |
+| --- | --- | --- |
+| `ok` | 可靠估值 | ✅ |
+| `stale` | 数据过期，但有展示值（`staleDisplayValueCny`） | ❌ |
+| `unavailable` | 无法估值 | ❌ |
+
+### 5.3 报价新鲜度策略（`policy.ts`）
+
+| `QuoteStatus` | 新鲜度上限 | 说明 |
+| --- | --- | --- |
+| `LIVE` | 1 小时 | 盘中价 |
+| `DELAYED` | 1 天 | 延迟行情 |
+| `CLOSED` | ∞ | 收盘价，到下一交易时段前有效 |
+| `MANUAL` | ∞ | 用户手填，不因时间失效 |
+| `STALE` | 0 | 本身就是过期态 |
+| `ERROR` | 0 | 永远不可用 |
+
+**原则：宁可标 STALE，也不把过期行情冒充实时。**
+
+### 5.4 汇率（`fx.ts`）
+
+- 缺汇率 → `missing_fx` → `unavailable`，**绝不按 1:1 折算**。
+- 过期汇率 → `stale_fx`。
+- 支持反向与 CNY 中转。
+
+### 5.5 as-of 语义（重要）
+
+`latestQuoteFor(quotes, instrumentId, asOf?)`：
+- **实时估值**：省略 `asOf` → 取全局最新。
+- **快照捕获**：传 `asOf = 捕获时刻` → 只取 `timestamp <= asOf` 的最新行情。
+
+这样**未来时间的行情不会进入更早时点的估值**。
+
+> ⚠️ **已知缺口（Post-Release 待修）**：`fx.ts` 的汇率选取**没有** as-of 上界，
+> 未来日期的汇率会被采用。修法是在 `pick()` 加 cutoff。
+
+---
+
+## 6. 负债判定（唯一入口）
+
+`src/lib/portfolio/liability.ts` 的 `decideLiability(account, instrument)` 是
+**全系统唯一的负债判据**：
+
+| 情况 | 判定 |
 | --- | --- |
-| 全天候（桥水） | 股票 28.5% / 长期国债 38% / 中期国债 14.25% / 黄金 7.13% / 大宗商品 7.13% / **现金 5%** |
-| 永久组合（哈利·布朗） | 股票 25% / 长期国债 25% / 黄金 25% / 现金 25% |
-| 经典 60/40 | 股票 60% / 债券 40% |
+| `instrument.assetClass === 'liability'` | 负债 |
+| `account.isLiability === true` | 负债 |
+| 两者都成立 | 负债（**只算一次**，返回布尔，结构上不可能重复计入） |
+| 两者冲突（账户负债但标的是资产类别） | **按负债计入（更保守）** + 标记 `conflict` 供 UI 提示 |
 
-> 全天候与桥水原始的 30/40/15/7.5/7.5 相比，**额外拆出 5% 现金**，其余四类按 95% 等比缩放，合计仍为 100%。
-> 原因：用户的「现金与固定资产」（活期、房产）必须找得到归属，否则只能被硬塞进债券，偏离度会完全失真。
-> 想回到原始比例，在设置页新建自定义策略即可。
+判定结果随 `ValuationResult.isLiability` 向下传递，
+`calculateTotals` / `buildSnapshot` / `deriveAnalysis` **全部只读它** ——
+**禁止**在任何别处重写 `assetClass === 'liability'` 或 `account.isLiability` 判断。
 
-### 再平衡计算口径
+**口径三分（不要混淆）**：
 
 ```
-分类市值 ──映射──> 策略资产类别金额 ──> 实际占比 / 偏离度 / 加减仓金额
+grossAssets      = 资产合计（不含负债）
+totalLiabilities = 负债合计
+netWorth         = grossAssets − totalLiabilities
 ```
 
-- **实际占比** = 该类市值 ÷ 分配总额
-- **偏离度**（百分点）= 实际占比 − 目标占比；`> 阈值` 建议减仓、`< −阈值` 建议加仓、阈值内标「正常」
-- **总偏离率** = Σ|偏离度| ÷ 2，用于健康度
-- **健康度**：≤3% 组合健康 · ≤8% 轻度偏离 · ≤15% 需要再平衡 · >15% 严重偏离
-- **资金自洽**：可动用资金 = min(低配缺口总额, 超配类别中**真正能卖出的标的**市值)，
-  再按各缺口比例分配给低配类别。之所以要区分「超配金额」和「可卖出市值」——
-  活期存款、房产虽然超配，却没法按比例卖出，如果把它们算成资金，就会出现凭空多出来的买入金额。
-  卖不动的那部分会显示为「手动减仓 X 元」并给出缺口提示。
-
-### 分类 → 策略类别的映射
-
-- 每种策略都有一套默认映射（「现金与固定资产」→现金、「黄金」→黄金、「负债」→债券类等），
-  在设置页的「资产映射」Tab 里可以逐条改，也可以把一个分类**按比例拆分**到多个类别（如 60% 股票 / 40% 债券）。
-- **基金按资产类型细分**：「基金」分类里的持仓会先按基金名称关键词识别为股票型 / 债券型 / 货币型 / 黄金商品型，
-  再分别归到「股票」或「债券」等类别（例如「易方达纯债债券A」→债券）。识别不出来的可在基金条目上手动标记。
-- 自定义分类没命中内置映射时，按名称关键词（现金 / 股 / 债 / 黄金 / 商品 / 负债…）兜底，
-  仍匹配不到就归入目标占比最大的类别，保证金额不会凭空消失（卡片里会提示）。
-- **负债默认不进占比分母**（按「可投资资产」计算），可在设置里切换为计入分母（按净值计算）。
-
-### 策略配置
-
-点击策略卡片右上角的设置按钮：
-
-- 切换策略 / 新建与编辑自定义策略（类别名称、目标比例、颜色，**合计必须 100% 才能保存**）
-- 拖动「偏离阈值」滑块（默认 5%，范围 1%~20%）
-- 编辑资产映射 / 一键恢复默认映射
-- 负债是否计入占比分母
-
-策略配置保存在 localStorage 的 `asset-card-wallet/strategy/v1`，与资产数据分开存放。
+资产类别占比的分母是 **`grossAssets`**，负债**不进**资产占比。
 
 ---
 
-## 🔌 接口说明（重要，含实测结论）
+## 7. 快照与归因
 
-需求文档里给出的接口是：
+### 7.1 快照的不可变性与日期守卫
 
-```
-https://fundgz.1234567.com.cn/js/{基金代码}.js?rt={时间戳}
-```
+`captureSnapshot()` **只允许创建「本地今天」的快照**：
 
-**实测（2026-10）该域名已下线**：无论 HTTP/HTTPS、是否带 `Referer`，都返回东方财富的「页面未找到」HTML（`Content-Type: text/html`），拿不到 `jsonpgz({...})` 数据。因此本项目没有把身家性命押在它上面，而是实现了**多通道自动降级**（`src/lib/fundService.ts`），任一通道成功即返回：
-
-| 顺序 | 通道 | 实现方式 | 说明 |
-| --- | --- | --- | --- |
-| 1 | `fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo` | `fetch`（该接口返回 `Access-Control-Allow-Origin: *`，并正确响应 OPTIONS 预检） | 天天基金 App 接口，**支持一次批量传入多只基金代码**，同时返回基金全称、最新公布净值、盘中估算净值与估算涨幅，首选 |
-| 2 | 同上的 `FundMNFInfo` | **JSONP**（`callback=` 回调） | **同一份数据，但走 `<script>` 加载**：即使 fetch 被网络策略 / 插件拦截，也能靠它拿到估值，是真正可用的 JSONP 兜底 |
-| 3 | `push2.eastmoney.com/api/qt/ulist.np/get` | **JSONP**（`cb=` 回调） | 东方财富行情接口，返回 LOF / ETF 的场内实时价与涨跌幅；交易所前缀由代码首位推断（`5` 开头 → 沪市 `1.`，其余 → 深市 `0.`） |
-| 4 | `fundgz.1234567.com.cn/js/{code}.js` | **JSONP**（`jsonpgz(...)`） | 历史接口（已下线），代码保留；一旦该接口恢复，无需改动业务代码即可自动重新启用 |
-
-### JSONP 在 Vite / GitHub Pages 下如何工作
-
-`src/lib/jsonp.ts` 用 `<script src>` 动态注入来绕过同源策略（脚本标签不受 CORS 限制），要点：
-
-1. 回调名全局唯一（`__acw_jsonp_<时间戳>_<序号>`）并挂在 `globalThis` 上，避免并发请求互相覆盖；
-2. 成功后删除全局函数并移除 `<script>`，不泄漏 DOM 节点；
-3. 默认 12s 超时，避免网络挂起导致 Promise 永不 settle；
-4. `script.onerror` 兜底捕获「域名不可达 / 已被拦截」，并把可读的错误原因透出到界面。
-
-浏览器里实际**优先走 `fetch`**（通道 1），只有 fetch 失败（网络策略、代理、接口变更）时才自动降级到通道 2/3/4 的 JSONP。这样既拿到了最快最稳的数据源，又保留了 JSONP 的兜底能力。
-
-### 遇到跨域 / 拉不到数据怎么办
-
-- 本项目调用的是第三方公开接口，**无法保证永久可用**；接口变动时只需在 `src/lib/fundService.ts` 里新增一个 provider。
-- 浏览器插件（广告拦截、隐私防护）可能拦掉 `*.eastmoney.com` 的脚本，导致 JSONP 通道失败 —— 界面会提示具体原因。
-- 若本地开发环境直连被拦截，`vite.config.ts` 已经预留了 `/eastmoney` 代理（指向 `https://fundmobapi.eastmoney.com`），可在 provider 里把基址换成本地代理路径。
-- 非交易时段 / QDII 基金可能没有盘中估值，界面会显示「暂无盘中估值（非交易时段 / QDII）」并回退到最新公布净值。
-- 估值仅供参考，实际以基金公司公布净值为准。
-
----
-
-## 🎨 主题（日间 / 夜间）
-
-默认**跟随系统**：iOS/Android 的自动深色、macOS 的日落切换都会实时响应。顶部工具栏第一个按钮可以循环切换
-`跟随系统 → 日间 → 夜间`，选择会写进 `localStorage`（键 `asset-card-wallet/theme`）。
-
-实现方式：**语义化 CSS 变量**，组件里不出现任何写死的颜色。
-
-```css
-:root, [data-theme='dark'] { --app:#000; --s1:#161616; --ink1:#fafafa; --up:#ff5a5f;  … }
-[data-theme='light']       { --app:#f5f5f4; --s1:#fff;   --ink1:#18181b; --up:#c62a1e; … }
-```
-
-| 变量组 | 用途 |
+| 日期 | 处理 |
 | --- | --- |
-| `--app` `--s1`→`--s4` | 页面底色与四层表面（卡片 / 次级容器 / 输入框 / 键盘按键） |
-| `--ink1`→`--ink4` | 四级文字，从最重要到最次要 |
-| `--line` `--line-strong` | 细边框与强调边框 |
-| `--up` `--down` | 涨跌（白天主题下自动换成更深的红/绿，保证白底可读） |
-| `--warn` `--info` `--good` `--danger` | 超配 / 低配 / 正常 / 危险等状态 |
-| `--accent-*` + `--accent-*-soft` | 分类主题色与其半透明底色，随主题切换 |
+| 本地今天 | 允许（同日可刷新，保留 `id` 与 `createdAt`） |
+| 过去 | **抛错**（估值用的是当前持仓 + 最新行情，没有 as-of 能力） |
+| 未来 | **抛错**（未来尚未发生） |
 
-几个容易踩的点，都已处理：
+`dryRun: true` 不受限（不产生历史事实）。
 
-- **首屏防闪白**：`index.html` 里有一段同步内联脚本，在样式表之前就把 `data-theme` 定好，夜间用户不会先闪一帧浅色；
-- **原生控件**：同步设置 `color-scheme`，滚动条、`<select>`、日期选择器等跟随主题；下拉箭头是自绘的，避免系统箭头颜色不匹配；
-- **对比度**：两套主题的正文/次要文字/涨跌色都按 WCAG AA 校准过（白天最弱的次要文字 4.25:1，卡片上是 4.64:1）；
-- **分类颜色**：数据里存的是色名（`gold` / `blue`…）而不是 hex，所以白天主题下金色会变成深琥珀色，不会白底上糊成一片。
+**历史快照永不重算。** `ensureDailySnapshot()` 只在「目标日期是今天」时才刷新。
 
-## 📱 响应式与交互
+### 7.2 归因恒等式
 
-- 移动端优先：整页最大宽度 `480px`，PC 上水平居中，模拟手机 App 观感
-- 底部弹出面板 + 遮罩，支持 `Esc` 关闭、点击遮罩关闭、打开时锁定背景滚动
-- 自研数字键盘（含 `1万 / 10万 / 100万` 等快捷金额），避免移动端输入法与小数点问题
-- 适配 `env(safe-area-inset-*)` 安全区（iPhone 刘海 / 底部横条）
-- 顶部金额可一键隐藏 / 显示（状态同样持久化）
-- 每 5 分钟 + 页面首次加载时静默刷新基金估值
+```
+netWorth = openingNetWorth
+         + externalInflow − externalOutflow
+         + investmentReturn
+         + fxEffect
+         + otherAdjustment
+```
 
----
+- `residual` 超容差时写入 `otherAdjustment` **并降级为 `partial`**，绝不静默塞进收益。
+- `openingGapDays(opening, date)`：期初与目标日期**不相邻**时（间隔 > 1 天），
+  归因降级为 `unavailable`，金额字段留 `undefined` —— **不摊平、不猜测**。
 
-## 📲 添加到主屏幕（PWA）
+### 7.3 快照持仓的「依据」字段（Schema V8）
 
-（见下方「独立窗口模式的顶部安全区」一节）
+为了让历史能自证「这一天这个价为什么是这个数」，
+`SnapshotPosition` 落盘了：`asOf` / `priceKind` / `quoteStatus` / `quoteSource` /
+`fxStatus` / `fxSource` / `reasons` / `staleValueCny` / `isLiabilityAtCapture`。
 
+`Snapshot` 还有 `openingDate`（期初是哪天）与 `capturedAt`（内容对应的捕获时刻）。
 
-
-### iOS 独立窗口模式的顶部安全区（两次改错，值得记）
-
-**现象 A（第一版）**：添加到主屏幕后打开，界面整体偏下、上面留白很宽，
-按钮点不上或「实际点中的位置偏上」，下拉一下恢复。
-
-**现象 B（第一次修完）**：顶部变得太靠上，标题和齿轮被状态栏遮住，齿轮完全点不到。
-
-**两次都错的根因**：一直在猜 `env(safe-area-inset-top)` 是否可信。
-
-- 猜「系统已预留、不该补」→ 内容钻进状态栏（现象 B）
-- 猜「env() 是准的、直接补」→ 也可能被遮住，因为独立模式下 `env()` 有时就返回 0
-
-**最终做法：不再猜，改成运行时实测 + 兜底**
-
-1. 首屏前用探针元素读 `env(safe-area-inset-top)`；有值就用它。
-2. 读到 0 且**处于独立窗口模式**时，按屏幕宽度兜底估算
-   （≥420px→59、≥390→54、≥375→47、其余→20）。
-3. 普通 Safari 不兜底 —— 地址栏不会压住内容，补了就是平白多一大块
-   （实测会把标题推到 86px）。
-4. `navigator.standalone` / `display-mode` 判定独立模式，挂载后与转屏时再校准一次。
-
-**关键教训**：`env(safe-area-inset-*)` 在 iOS 独立模式下不可靠，
-必须准备兜底路径；而且兜底不能对「所有 iOS」生效，否则普通 Safari 受害。
-
-设置 → **诊断信息**里可以看到该设备的实际数值（`env()` 读数、独立模式、屏幕/视口尺寸等），
-出问题时直接看/复制这些值，就不必再猜。
-
-### 面板叠加导致页面无法滚动
-
-**现象**：在分类里删条目、或删除一个分类后回到主页，页面滑不动了。
-
-**根因**：`Sheet` 原先各自「保存上一次的 `body.style.overflow`，关闭时还原」。
-但面板会叠加（分类详情 → 删除确认），后开的那个读到的已经是 `hidden`，
-把它当原值存下来，关闭时就还原成了 `hidden`，滚动锁再也解不开。
-
-**修复**：`src/lib/scrollLock.ts` 用**引用计数**——只有第一个锁请求记录真实原值，
-最后一个释放时才还原；顺带在锁定时补偿滚动条宽度，避免横向跳动。
-`scrollLock.test.ts` 专门盯这个回归。
+> ⚠️ V7 及以前的快照**没有**这些字段，**不回填** —— 缺失 = 「无法追溯」。
+> 展示时用 `basisView.ts`，缺失一律显示「无法追溯」，**绝不补值**。
 
 ---
 
-## ❓ 常见问题
+## 8. 开发与构建
 
-**Q：数据存在哪里？会不会丢？**
-A：只存在当前浏览器的 `localStorage`（键名 `asset-card-wallet/portfolio/v2`）。清理浏览器数据、换浏览器、用无痕模式都会看不到旧数据，建议定期用「导出 JSON」备份。
+### 8.1 命令
 
-**Q：换电脑怎么迁移？**
-A：旧设备「导出 JSON」→ 新设备「导入 JSON」。
+```bash
+pnpm install            # 安装依赖
+pnpm dev                # 开发服务器（默认 http://localhost:5173）
+pnpm typecheck          # tsc -b --noEmit
+pnpm test               # vitest run（43 个测试文件）
+pnpm build              # tsc -b && vite build → dist/
+pnpm preview            # 本地预览构建产物
+```
 
-**Q：净资产为什么和我算的不一样？**
-A：注意「负债」分类勾选了「计入负债」后会从净资产中扣减；基金按最新估值计算，非交易时段用的是最近一次同步的净值（可点右上角刷新）。
+**Node 必须 ≥ 22.13**（`pnpm@11.7.0` 用到 `node:sqlite`；Node 20 会抛
+`ERR_UNKNOWN_BUILTIN_MODULE`）。
 
-**Q：构建时报 `Cannot find module @rollup/rollup-darwin-arm64` / `dlopen ... different Team IDs`？**
-A：这是 macOS 上原生模块签名与运行时签名不匹配导致的（例如用带 Hardened Runtime 的签名 Node 加载 ad-hoc 签名的 rollup binding）。换用官方 Node 或 `nvm` 安装的 Node 执行构建即可；GitHub Actions 的 Node 环境不受影响。
+### 8.2 测试约定
 
-**Q：为什么「现金与固定资产」在组合里的占比这么高，偏离度一下就爆表？**
-A：房产、活期这些确实会占大头。如果不想让它们参与策略比较，可以在设置 →「资产映射」里把该分类映射成不合适就删掉映射，或把「负债计入占比分母」打开按净值口径看；也可以只用自定义策略，把目标比例设成符合自己实际情况的数字。
+- 框架 Vitest，环境 `node`，`src/test/setup.ts` 注入 `fake-indexeddb`。
+- 测试文件与源码同目录：`*.test.ts`。
+- 绝大多数领域测试用 `createInMemoryRepository()`；
+  需要验证 Dexie 真实行为时用 `createPairedTestStore(name)`。
+- 联网接口用例用 `describe.skipIf / it.skipIf` 条件跳过，CI 设 `ACW_SKIP_API=1`。
 
-**Q：再平衡建议里的金额为什么比我预期的少？**
-A：可动用资金只统计**能按比例卖出的标的**（目前是基金）。活期存款、房产虽然超配，但无法自动减仓，这部分会显示成「手动减仓 X 元」并提示缺口，需要你手动处理或靠新增投入补齐。
+### 8.3 部署（GitHub Pages）
 
-**Q：基金被归错类别怎么办？**
-A：基金默认按名称关键词识别类型。识别不准时，在基金条目的编辑表单里可以手动标记为股票型 / 债券型等；也可以在「资产映射」里直接改整个「基金」分类的归属。
+`.github/workflows/deploy.yml` 在 `push main` 时执行：
 
-**Q：我想固定用日间或夜间，不想跟随系统？**
-A：点顶部工具栏最左边的按钮循环切换「跟随系统 → 日间 → 夜间」，图标会跟着变（显示器 / 太阳 / 月亮），选择会记住。
+```
+checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
+→ typecheck → test → build → touch dist/.nojekyll
+→ configure-pages → upload-pages-artifact(dist) → deploy-pages
+```
 
-**Q：添加到主屏幕后数据还在吗？**
-A：在。主屏幕打开和 Safari 里打开是**同一个 origin、同一份 localStorage**，数据互通；但换设备/清浏览器数据仍会丢，记得定期导出 JSON。
+- `vite.config.ts` 的 **`base: './'`** → 产物全部相对路径，可在任意子目录部署。
+- **无 SPA history 路由**（Tab 是 React state + localStorage），刷新不需要 404 兜底。
+- **无 Service Worker、无 cache API** → 不存在缓存互顶问题。
+- **无外部字体 / CDN**。
 
-**Q：为什么没有离线缓存（Service Worker）？**
-A：数据本身就在本地，离线能看到已有内容；不做 SW 是为了避免「版本更新后仍读旧缓存」这类常见的坑。需要真正的离线启动可以再加。
+### 8.4 网络行为（重要，容易误判）
 
-**Q：外币金额是怎么存的？汇率变了会怎样？**
-A：条目按原币存储（只在数据里多一个 `currency` 字段），汇总时才用实时汇率折算成人民币。
-所以汇率一变，总资产会自动跟着变——从没取到过汇率时界面会明确写「汇率不可用」，不会假装折算成功。
+**2.0 的功能路径不联网。** 行情与汇率全部由用户手动录入
+（`valuation/priceService.ts`），估值只读 IndexedDB 里的 `quotes` / `fxRates`，
+`src/lib/valuation/` 下**没有任何 `fetch`**。
 
-**Q：日元为什么小数点那么多位？**
-A：1 日元 ≈ 0.043 元，按 2 位小数显示会是一串 0；所以日元这类小面额币种的原币金额保留 4 位小数。
+⚠️ **但生产 bundle 里存在联网代码**，原因是 `src/main.tsx` 同时导入了
+1.0 的 legacy 视图与 2.0 的正式外壳，由 `resolveView()` 运行时选择：
+默认渲染 `w3`（= 2.0 `AppShell`）；`?legacy=1` 或 `?w2=1` 会渲染 1.0。
+因此 `src/lib/fundService.ts` / `src/lib/usStock.ts` / `src/lib/fx.ts`
+（各含一处 `fetch`，属 1.0 的基金与美股实时行情）会被打进同一个 chunk。
 
-**Q：我以前删过「国债」分类，升级后它又回来了？**
-A：这是版本升级的一次性补齐（为了让老用户也能用上新分类）。再删一次即可，之后不会再自动加回来。
-
-**Q：`pnpm install` 提示忽略了 esbuild 的构建脚本？**
-A：pnpm 10+ 默认拦截依赖的安装脚本，仓库里的 `pnpm-workspace.yaml` 与 `package.json` 的 `pnpm.onlyBuiltDependencies` 已放行 `esbuild`；若仍提示，执行 `pnpm approve-builds` 选择 esbuild 即可。
+**结论**：
+- 正常使用 2.0（无 `?legacy=1` / `?w2=1`）**不会**触发这些请求；
+- 这些模块属于 1.0 视图，**不要**在 2.0 的新功能里调用它们；
+- 若要彻底移除，需要拆分入口或做代码分割 —— 属已知 P2（见 §11）。
 
 ---
 
-## 📄 License
+## 9. 与 1.0 WealthCard 的关系
 
-MIT
+| 维度 | 1.0 `WealthCard` | 2.0 `AssetIntegration` |
+| --- | --- | --- |
+| URL | `https://lixiaoyu233.github.io/WealthCard/` | `https://lixiaoyu233.github.io/AssetIntegration/` |
+| 仓库 | `lixiaoyu233/WealthCard` | `lixiaoyu233/AssetIntegration` |
+| 事实源 | **localStorage** | **IndexedDB** |
+| 键 / 库名 | `asset-card-wallet/*` | `wealthcard` |
+| PWA `id` | `/WealthCard/` | `/AssetIntegration/` |
+
+**两者是独立产品，必须互不干扰。** 关键实现：
+
+```ts
+// src/main.tsx —— 2.0 的启动路径
+const result = await migrateOnStart({ repo, db, readLegacyData: false })
+```
+
+⚠️ **`localStorage` 与 `IndexedDB` 是按 origin 隔离、不按路径隔离的。**
+两个站点同属 `lixiaoyu233.github.io`，因此 2.0 **默认能读到** 1.0 的
+`asset-card-wallet/*` 键。若不加这个开关，2.0 启动会把 1.0 数据迁移进自己的
+IndexedDB，并调用 `setReadOnlyMode(true)` 把 **1.0 界面变成只读**。
+
+`readLegacyData: false` 的效果：
+- **不读取**任何 `asset-card-wallet/*` 键；
+- **不删除、不改写**任何键；
+- 只开启只读（2.0 自身的事实源是 IndexedDB，不写 localStorage 业务键）；
+- 如实返回 `status: 'no-legacy'`，不谎报迁移成功。
+
+`migrateOnStart` 的该选项**默认是 `true`**（保留原有行为与测试语义），
+只有 2.0 的启动路径显式传 `false`。
+
+> **改这一块时的红线**：不要让 2.0 读写 `asset-card-wallet/*`。
+> `legacyStore.ts` 里的读取器与 `removeLegacyData()` 是给 1.x 迁移场景用的，
+> 在本产品里**不应被调用**。
+
+---
+
+## 10. 不可违反的不变量（改代码前请逐条确认）
+
+1. **`Transaction` 是唯一事实源**，`Holding` 是可重建缓存。
+   不要为了让数字好看而直接改 `Holding`。
+2. **不可估值 ≠ 价值为 0。** 拿不到就写 `undefined`，**绝不写 0**。
+3. **缺汇率 ≠ 1。** 缺 `missing_fx`，**绝不 1:1 折算**。
+4. **`STALE` / `ERROR` 不进可靠总额。** 过期只给展示值。
+5. **历史快照不可回溯改写。** 不回填、不重算、不插值。
+6. **负债判定只有 `decideLiability()` 一个入口。** 下游只读 `isLiability`。
+7. **禁止假成功。** UI 成功提示必须晚于 Domain 写入；写入失败必须如实报错。
+8. **作废不物理删除。** 只改 `status`，保留记录用于审计。
+9. **负数量 / 负现金 / NaN 不得落库。** 写入前必须有终态检查。
+10. **不给 `holdings` 加唯一索引。**
+11. **`captureSnapshot` 不接受过去 / 未来日期。**
+12. **恢复流程必须走「校验 → dry-run → 暂存备份 → 原子切换」**，不得直接 `replaceAll`。
+
+---
+
+## 11. 已知待办（Post-Release，不要顺手改）
+
+以下是**已审计确认、明确延期**的项目。修改它们之前请先与产品负责人确认：
+
+| 编号 | 问题 | 影响 |
+| --- | --- | --- |
+| P1-1 | 暂存备份写在 `localStorage`（约 5MB 配额） | 数据量约 1.4 年后导入会失败 |
+| P1-2 | 回滚入口常驻、一键不可逆、无二次确认 | 误点会丢弃导入后的数据 |
+| P1-3 | 每笔交易 `replaceAll` 全库重写（含整张 snapshots） | 3 年后单笔写入秒级卡顿 |
+| P1-4 | 导入脏备份后写入锁死（校验只警告、写入却硬拒） | 需先修导入校验口径 |
+| P1-5 | 负债冲突有提示但无修复入口（账户不可编辑） | 冲突无法消除 |
+| P1-7 | 持仓 / 账户无编辑删除；手工持仓留空会存成 0 占用唯一键 | 数据无法整理 |
+| FX as-of | 汇率选取没有 cutoff，未来汇率会被采用 | 需在 `fx.ts` 的 `pick()` 加上界 |
+| 收益类交易 | 利息 / 分红在「仅持有现金类标的」时 UI 无可选标的 | 领域层支持但 UI 死路 |
+| P2 | 首屏体积（主 chunk 约 1.02 MB / gzip 311 kB，含 2.0 不使用的 recharts） | 纯性能 |
+
+---
+
+## 12. 修改建议
+
+- **改账本语义** → 先读 `src/lib/ledger/types.ts` 的 `TRANSACTION_SEMANTICS`
+  与 `derive.ts` 的两遍派生，再动任何东西。
+- **改估值** → 先读 `src/lib/valuation/policy.ts` 与 `engine.ts` 的六步流程。
+- **改 Schema** → 读 `src/lib/db/schema.ts` 顶部的不变量说明与
+  `migrations/` 里已有迁移的写法（**零填充**是硬要求）。
+- **改 UI 数字** → 确认它来自 `loadPortfolio2()` 的派生结果，
+  而不是页面自己又算一遍。
+- **任何「让数字更好看」的改动** → 先回来读 §10 的不变量清单。
+
+---
+
+## 附：许可与隐私
+
+本工具**不上传任何数据**。所有资产信息只存在你自己浏览器的 IndexedDB 中，
+清空站点数据即彻底删除。请自行定期使用「设置 → 备份与恢复」导出 JSON 备份。
