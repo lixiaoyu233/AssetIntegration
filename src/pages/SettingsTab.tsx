@@ -33,9 +33,21 @@ export interface SettingsTabProps {
   analysis: AnalysisView
   repo: PortfolioRepository
   onChanged: () => void
+  /**
+   * 汇率自动同步的状态与手动刷新入口。
+   *
+   * 可选：不传时汇率面板退化为「只有手动录入」，
+   * 便于测试单独渲染本组件，也避免把网络依赖强加给所有调用方。
+   */
+  fxSync?: {
+    busy: boolean
+    stale: boolean
+    last: { source: string; syncedAt: string; error?: string } | null
+    refresh: () => Promise<unknown>
+  }
 }
 
-export default function SettingsTab({ portfolio, analysis, repo, onChanged }: SettingsTabProps) {
+export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSync }: SettingsTabProps) {
   /** 行情 / 汇率覆盖率（纯读取，不改金额） */
   const coverage = useMemo(() => quoteCoverageOf(portfolio), [portfolio])
 
@@ -372,6 +384,7 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged }: Se
           portfolio={portfolio}
           repo={repo}
           onChanged={onChanged}
+          fxSync={fxSync}
         />
       ) : null}
       {attrOpen ? (

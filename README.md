@@ -441,20 +441,64 @@ checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
 
 ### 8.5 网络行为（重要，容易误判）
 
-**2.0 的功能路径不联网。** 行情与汇率全部由用户手动录入
-（`valuation/priceService.ts`），估值只读 IndexedDB 里的 `quotes` / `fxRates`，
-`src/lib/valuation/` 下**没有任何 `fetch`**。
+**汇率会自动获取**，行情仍是纯手动录入。
 
-⚠️ **但生产 bundle 里存在联网代码**，原因是 `src/main.tsx` 同时导入了
-1.0 的 legacy 视图与 2.0 的正式外壳，由 `resolveView()` 运行时选择：
-默认渲染 `w3`（= 2.0 `AppShell`）；`?legacy=1` 或 `?w2=1` 会渲染 1.0。
-因此 `src/lib/fundService.ts` / `src/lib/usStock.ts` / `src/lib/fx.ts`
+| 数据类型 | 来源 | 是否联网 |
+| --- | --- | --- |
+| **汇率** | 自动拉取（三级降级，见下） | ✅ 联网 |
+| 行情（价格 / 净值） | 用户手动录入（`valuation/priceService.ts`） | ❌ 不联网 |
+
+**汇率的三级降级**（`src/lib/valuation/fxAutoFetch.ts`）：
+
+```
+① open.er-api.com     → source 'er-api'    status LIVE
+② jsdelivr            → source 'jsdelivr'  status DELAYED
+③ public/fx-seed.json → source 'seed'      status SEED（不因时间失效）
+```
+
+- **兜底种子先落库、再尝试网络源**：种子是本地静态文件（毫秒级），
+  网络源可能要等到超时。先落种子能让数字立刻可用，不会先闪一下「不可估值」。
+- 网络源成功后，因为状态优先级 `LIVE(0) < DELAYED(1) < SEED(2)`
+  （`fx.ts` 的 `rateStatusRank`），更权威的值自动接管，**不删除种子行**。
+- 触发时机：启动 / 页面回到前台 / 每 6 小时（`FX_REFRESH_MS`），
+  另有汇率面板里的「立即刷新」按钮。间隔用 `meta` 里的 `fx/last-sync` 节流，
+  跨刷新、跨标签页都不会重复请求。
+- **失败不抛错**：汇率不是核心依赖，全失败时如实返回并在 UI 标注来源。
+
+> ⚠️ **候选比较的顺序很关键**（`fx.ts` 的 `chooseBetter`）：
+> **先比「是否过期」，再比状态优先级**，最后比时间。
+> 若先比状态优先级，一条已过期的 `LIVE` 会压住不过期的 `SEED`，
+> 导致「拉取失败回落兜底」失效。改这里前请先读该函数的注释。
+
+⚠️ **生产 bundle 里还有 1.0 视图的联网代码**：`src/main.tsx` 同时导入了
+1.0 的 legacy 视图与 2.0 的正式外壳，由 `resolveView()` 运行时选择
+（默认 `w3` = 2.0；`?legacy=1` 或 `?w2=1` 才是 1.0）。因此
+`src/lib/fundService.ts` / `src/lib/usStock.ts` / `src/lib/fx.ts`
 （各含一处 `fetch`，属 1.0 的基金与美股实时行情）会被打进同一个 chunk。
 
 **结论**：
-- 正常使用 2.0（无 `?legacy=1` / `?w2=1`）**不会**触发这些请求；
-- 这些模块属于 1.0 视图，**不要**在 2.0 的新功能里调用它们；
+- 2.0 会自动发起的网络请求只有**汇率**这一类；
+- 1.0 的联网模块**不要**在 2.0 的新功能里调用；
 - 若要彻底移除，需要拆分入口或做代码分割 —— 属已知 P2（见 §11）。
+
+### 8.6 兜底汇率文件（`public/fx-seed.json`）
+
+网络源都拿不到时使用。**你只需要维护这一个文件**：
+
+```json
+{
+  "asOf": "2026-10-05",
+  "rates": { "CNY": 1, "USD": 6.71, "HKD": 0.855, "JPY": 0.0425 }
+}
+```
+
+- 方向是**直读**的「1 外币 = ? CNY」（与 `FxRate` 的 base=外币 / quote=CNY 一致，
+  **不做倒数**；两个网络源给的是反向数据，代码里会取倒数）。
+- `asOf` 该值**不会**随时间被判为过期
+  （`status: 'SEED'` 在 `resolveRate` 里短路过期判定）。
+- 改完直接 commit，CI 约 2 分钟部署生效。
+- 建议覆盖全部受支持币种（见 `src/lib/currency.ts` 的 `CURRENCIES`），
+  否则未覆盖的币种在网络失败时仍会显示「不可估值」。
 
 ---
 

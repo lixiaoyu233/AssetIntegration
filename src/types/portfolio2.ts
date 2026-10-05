@@ -430,13 +430,26 @@ export interface Quote {
  * FxRate 汇率
  * ------------------------------------------------------------------ */
 
-export type FxStatus = 'LIVE' | 'DELAYED' | 'STALE' | 'MANUAL' | 'ERROR'
+/**
+ * 汇率状态。
+ *
+ * - `LIVE` / `DELAYED`：自动拉取到的实时/延迟汇率，**会**随时间降级为 `STALE`
+ * - `STALE`：已过期（但仍可用于展示与归因）
+ * - `MANUAL`：用户手填，**不因时间失效**
+ * - `SEED`：用户维护的**兜底基准**（`public/fx-seed.json`），**不因时间失效**
+ * - `ERROR`：获取失败，不参与换算
+ *
+ * ⚠️ `MANUAL` 与 `SEED` 都**不参与过期判定**（见 `resolveRate` 的 `finish()`）。
+ * 两者的区别只在来源：`MANUAL` 是用户在某次操作里手填的，`SEED` 来自种子文件。
+ */
+export type FxStatus = 'LIVE' | 'DELAYED' | 'STALE' | 'MANUAL' | 'SEED' | 'ERROR'
 
 export const FX_STATUS_LABEL: Record<FxStatus, string> = {
   LIVE: '实时',
   DELAYED: '延迟',
   STALE: '已过期',
   MANUAL: '手动',
+  SEED: '兜底',
   ERROR: '获取失败',
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Home, Layers, PieChart, Plus, TrendingUp, Settings as SettingsIcon } from 'lucide-react'
 import { useMemo } from 'react'
 import { usePortfolio2 } from '../hooks/usePortfolio2'
+import { useFxAutoSync } from '../hooks/useFxAutoSync'
 import { needsMigrationAttention, startupMigrationStatus } from '../lib/readOnly'
 import { ensureDailySnapshot } from '../lib/performance/dailySnapshot'
 import { createDexieRepository } from '../lib/db/dexieRepository'
@@ -129,6 +130,15 @@ export default function AppShell({
   }, [reload, activeRepo])
 
   /*
+   * 汇率自动同步（启动 / 页面可见 / 每 6 小时 + 手动刷新）。
+   *
+   * 同步会写入 fxRates，因此用 `handleChanged` 作为回调 ——
+   * 它会先刷新当日快照再重载派生结果，保证估值与今日快照一起更新。
+   * ⚠️ 汇率写入不会改写任何历史快照（`SnapshotPosition` 已冻结 rateToCny）。
+   */
+  const fxSync = useFxAutoSync(activeRepo, handleChanged)
+
+  /*
    * 启动迁移状态（W11 Blocker Patch，P1-6）。
    * `main.tsx` 在启动编排后写入；这里读取并在 UI 上明确展示。
    */
@@ -211,6 +221,7 @@ export default function AppShell({
           />
         ) : (
           <SettingsTab
+            fxSync={fxSync}
             portfolio={data.portfolio}
             analysis={data.analysis}
             repo={activeRepo}

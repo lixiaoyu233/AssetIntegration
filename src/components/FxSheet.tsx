@@ -30,6 +30,25 @@ export interface FxSheetProps {
   portfolio: Portfolio2
   repo: PortfolioRepository
   onChanged: () => void
+  /**
+   * 自动同步状态与「立即刷新」入口（可选）。
+   *
+   * 不传时本面板退化为「只有手动录入」，便于测试单独渲染。
+   */
+  fxSync?: {
+    busy: boolean
+    stale: boolean
+    last: { source: string; syncedAt: string; error?: string } | null
+    refresh: () => Promise<unknown>
+  }
+}
+
+/** 自动来源的可读标签（手动录入也在内，便于统一展示） */
+const AUTO_SOURCE_LABEL: Record<string, string> = {
+  'er-api': '自动 · open.er-api.com',
+  jsdelivr: '自动 · jsdelivr',
+  seed: '兜底种子文件',
+  manual: '手动录入',
 }
 
 /** 本地日期时间 → ISO */
@@ -44,7 +63,7 @@ function toIso(local: string): string {
   return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
 }
 
-export default function FxSheet({ open, onClose, portfolio, repo, onChanged }: FxSheetProps) {
+export default function FxSheet({ open, onClose, portfolio, repo, onChanged, fxSync }: FxSheetProps) {
   /** 缺汇率的币种（优先提示这些） */
   const missing = useMemo(() => missingCurrencies(portfolio), [portfolio])
   const options = currencyOptions().filter((c) => c !== 'CNY')
@@ -67,6 +86,23 @@ export default function FxSheet({ open, onClose, portfolio, repo, onChanged }: F
   const historyCount = portfolio.fxRates.filter(
     (r) => r.baseCurrency === currency && r.quoteCurrency === 'CNY',
   ).length
+
+  /**
+   * 当前生效汇率的来源标签。
+   *
+   * 为什么要显示：自动获取失败时会静默回落到兜底种子，
+   * 若不标明来源，用户会以为看到的是实时价 —— 属于「假成功」的变体。
+   */
+  const existingSourceLabel = useMemo(() => {
+    if (!existing) return ''
+    const hit = portfolio.fxRates.find(
+      (r) =>
+        r.baseCurrency === currency &&
+        r.quoteCurrency === 'CNY' &&
+        r.timestamp === existing.asOf,
+    )
+    return hit ? (AUTO_SOURCE_LABEL[hit.source] ?? hit.source) : ''
+  }, [existing, portfolio.fxRates, currency])
 
   const submit = async () => {
     setBusy(true)
@@ -126,10 +162,45 @@ export default function FxSheet({ open, onClose, portfolio, repo, onChanged }: F
       <p className="flex items-start gap-1.5 rounded-xl border border-line bg-s2 px-3 py-2 text-[11px] leading-relaxed text-ink3">
         <Info size={12} className="mt-0.5 shrink-0" />
         <span>
-          W6 阶段为**手动录入**：不会联网获取汇率。
-          <span className="text-ink2">缺少汇率时持仓保持「无法估值」，绝不会按 1:1 折算。</span>
+          汇率会**自动获取**：启动时、页面回到前台时、以及每 6 小时各检查一次，
+          依次尝试 open.er-api.com → jsdelivr → 仓库内的兜底种子文件。
+          <span className="text-ink2">全部拿不到时用兜底值；再没有则保持「无法估值」，绝不会按 1:1 折算。</span>
         </span>
       </p>
+
+      {/* 立即刷新 + 当前来源：让「这次用的是实时价还是兜底价」一眼可见 */}
+      {fxSync ? (
+        <div className="mt-2 rounded-xl border border-line bg-s2 px-3 py-2" data-testid="fx-sync-bar">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-ink3" data-testid="fx-sync-status">
+              {fxSync.busy
+                ? '正在获取汇率…'
+                : fxSync.last
+                  ? fxSync.last.source === 'none'
+                    ? '自动获取失败，正在使用已有汇率'
+                    : `上次获取：${AUTO_SOURCE_LABEL[fxSync.last.source] ?? fxSync.last.source}`
+                  : '尚未获取'}
+              {fxSync.last?.syncedAt && !fxSync.busy
+                ? ` · ${new Date(fxSync.last.syncedAt).toLocaleString('zh-CN')}`
+                : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => void fxSync.refresh()}
+              disabled={fxSync.busy}
+              className="shrink-0 rounded-lg border border-line bg-s1 px-2.5 py-1 text-[11px] text-ink2 disabled:opacity-50"
+              data-testid="fx-refresh"
+            >
+              {fxSync.busy ? '获取中…' : '立即刷新'}
+            </button>
+          </div>
+          {fxSync.last?.error && !fxSync.busy ? (
+            <p className="mt-1 text-[10px] text-ink4" data-testid="fx-sync-error">
+              自动来源均不可用：{fxSync.last.error}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {missing.length > 0 ? (
         <p className="mt-2 rounded-xl border border-warn/25 bg-warn/10 px-3 py-2 text-[11px] tone-warn" data-testid="fx-missing">
@@ -162,8 +233,9 @@ export default function FxSheet({ open, onClose, portfolio, repo, onChanged }: F
         {existing ? (
           <p className="rounded-xl border border-line bg-s2 px-3 py-2 text-[11px] text-ink4" data-testid="fx-existing">
             当前汇率：1 {currency} = {existing.rate.toLocaleString('zh-CN')} CNY ·{' '}
-            {FX_STATUS_LABEL[existing.status as keyof typeof FX_STATUS_LABEL] ?? existing.status} ·{' '}
-            依据 {new Date(existing.asOf).toLocaleString('zh-CN')}
+            {FX_STATUS_LABEL[existing.status as keyof typeof FX_STATUS_LABEL] ?? existing.status}
+            {existingSourceLabel ? ` · 来源 ${existingSourceLabel}` : ''} · 依据{' '}
+            {new Date(existing.asOf).toLocaleString('zh-CN')}
           </p>
         ) : (
           <p className="text-[11px] tone-warn" data-testid="fx-none">
