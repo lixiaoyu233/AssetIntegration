@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Home, Layers, PieChart, Plus, TrendingUp, Settings as SettingsIcon } from 'lucide-react'
 import { useMemo } from 'react'
 import { usePortfolio2 } from '../hooks/usePortfolio2'
@@ -15,6 +15,7 @@ import AnalysisTab from './AnalysisTab'
 import HistoryTab from './HistoryTab'
 import SettingsTab from './SettingsTab'
 import TransactionSheet from '../components/TransactionSheet'
+import Toast, { type ToastMessage } from '../components/Toast'
 
 /**
  * W3 正式应用外壳
@@ -163,6 +164,61 @@ export default function AppShell({
   const quoteSync = useQuoteAutoSync(activeRepo, handleChanged)
 
   /*
+   * 首页右上角「刷新」：**更新行情 + 汇率（联网）→ 重算 → 如实提示**。
+   *
+   * 为什么不是单纯重读本地库：那个动作只有几毫秒，用户看不到任何变化，
+   * 也无法区分「数据没变」与「按钮没生效」。行情/汇率才是会变的输入，
+   * 把它们一起拉下来，这个按钮才有可感知的作用。
+   *
+   * ⚠️ 两个同步函数都**永不抛错**，成功/失败一律从返回值如实读取 —— 禁止假成功。
+   */
+  const [refreshingAll, setRefreshingAll] = useState(false)
+  const [toast, setToast] = useState<ToastMessage | null>(null)
+  /** 连点守卫（两个 hook 内部也各有 running 守卫，这里再多一道） */
+  const refreshingRef = useRef(false)
+
+  const refreshMarketData = useCallback(async () => {
+    if (refreshingRef.current) return
+    refreshingRef.current = true
+    setRefreshingAll(true)
+    try {
+      // 两个源互不依赖 → 并发；顺序无关
+      const [fx, quotes] = await Promise.all([fxSync.refresh(), quoteSync.refresh()])
+
+      /* 写入后必须重新派生，并让「今日快照」跟上（历史快照不受影响） */
+      try {
+        await ensureDailySnapshot(activeRepo)
+      } catch {
+        // 快照失败不阻断刷新
+      }
+      await reload()
+
+      const fxText = !fx
+        ? '汇率已在更新'
+        : fx.source === 'none'
+          ? '汇率获取失败'
+          : `汇率 ${fx.written} 条`
+      const quoteText = !quotes
+        ? '行情已在更新'
+        : quotes.outcomes.length === 0
+          ? '无可更新的行情'
+          : `行情 ${quotes.written}/${quotes.outcomes.length} 项`
+
+      const failedQuote = quotes?.outcomes.find((o) => !o.ok)
+      const failed = fx?.source === 'none' || !!failedQuote
+      const detail = failedQuote?.error ?? fx?.error
+      setToast({
+        id: Date.now(),
+        tone: failed ? 'error' : 'success',
+        text: `${fxText} · ${quoteText}${detail ? `（${detail}）` : ''}`,
+      })
+    } finally {
+      refreshingRef.current = false
+      setRefreshingAll(false)
+    }
+  }, [fxSync.refresh, quoteSync.refresh, activeRepo, reload])
+
+  /*
    * 启动迁移状态（W11 Blocker Patch，P1-6）。
    * `main.tsx` 在启动编排后写入；这里读取并在 UI 上明确展示。
    */
@@ -220,7 +276,8 @@ export default function AppShell({
             loadedAt={data.loadedAt}
             loading={loading}
             error={error}
-            onReload={() => void reload()}
+            onRefresh={() => void refreshMarketData()}
+            refreshing={refreshingAll}
             coldStart={
               data.portfolio.accounts.length === 0 && data.portfolio.instruments.length === 0
             }
@@ -315,6 +372,9 @@ export default function AppShell({
           })}
         </div>
       </nav>
+
+      {/* 轻提示：刷新结果必须看得见（成功 / 部分失败 / 失败原因） */}
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   )
 }

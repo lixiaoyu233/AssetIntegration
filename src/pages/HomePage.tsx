@@ -32,7 +32,18 @@ export interface HomePageProps {
   loadedAt: number
   loading: boolean
   error: string | null
-  onReload: () => void
+  /** 更新行情与汇率（**联网**）后重新派生 —— 首页右上角刷新按钮 */
+  onRefresh: () => void
+  /** 正在更新，用于转圈与禁用（与本地重算的 `loading` 区分） */
+  refreshing: boolean
+  /**
+   * 刷新按钮的说明文案。
+   *
+   * 默认是「联网更新行情与汇率」—— 主外壳（AppShell）确实如此。
+   * 只读预览壳（`?w2=1` 的 App2）没有联网同步，必须传入符合事实的文案，
+   * 否则按钮说明会撒谎。
+   */
+  refreshHint?: string
   /** 冷启动：还没有任何数据时，指向「资产」页建立结构（Phase 8 / W7） */
   coldStart?: boolean
   onGoAssets?: () => void
@@ -51,7 +62,9 @@ export default function HomePage({
   loadedAt,
   loading,
   error,
-  onReload,
+  onRefresh,
+  refreshing,
+  refreshHint = '联网更新行情与汇率，然后重新计算',
   coldStart,
   onGoAssets,
 }: HomePageProps) {
@@ -71,13 +84,14 @@ export default function HomePage({
           </div>
           <button
             type="button"
-            onClick={onReload}
-            disabled={loading}
+            onClick={onRefresh}
+            disabled={refreshing || loading}
             className="rounded-lg border border-line p-1.5 text-ink3 disabled:opacity-50"
-            aria-label="刷新"
+            aria-label={refreshing ? '正在更新' : refreshHint}
+            title={refreshHint}
             data-testid="reload"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={refreshing || loading ? 'animate-spin' : ''} />
           </button>
         </div>
 
@@ -91,7 +105,9 @@ export default function HomePage({
         </div>
 
         <p className="mt-2 text-[11px] text-ink4" data-testid="loaded-at">
-          数据更新于 {new Date(loadedAt).toLocaleTimeString('zh-CN')}
+          {refreshing
+            ? '正在更新行情与汇率…'
+            : `数据更新于 ${new Date(loadedAt).toLocaleTimeString('zh-CN')}`}
         </p>
       </section>
 

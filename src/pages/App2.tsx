@@ -48,7 +48,10 @@ export default function App2({ initialTab = 'home' }: { initialTab?: W2Tab }) {
               loadedAt={data.loadedAt}
               loading={loading}
               error={error}
-              onReload={() => void reload()}
+              onRefresh={() => void reload()}
+              refreshing={loading}
+              /* 这个壳是只读预览，没有联网同步 —— 按事实说明 */
+              refreshHint="重新读取并计算（此视图不联网）"
             />
           ) : (
             <p className="mx-auto max-w-[480px] px-4 pt-8 text-[12px] text-ink4">
