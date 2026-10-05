@@ -8,13 +8,15 @@ import { quoteOf } from '../lib/valuation/basis'
 import Sheet from './Sheet'
 
 /**
- * 行情录入 / 更新（Phase 8 / W6）
+ * 行情录入 / 更新
  *
- * ## 为什么需要手动录入
+ * ## 两条并存的路径
  *
- * W6 审计发现 2.0 侧对 `quotes` 的写入调用数为 0 ——
- * 行情只能来自 W1 迁移，之后只减不增，一旦过期可靠总资产静默萎缩。
- * 本 Sheet 补齐这个**能力断点**（W6 不做自动获取）。
+ * 1. **自动获取**（`quoteAutoFetch.ts`）：按 `instrumentType` 路由 ——
+ *    `fund` 走场外净值、`stock` / `etf` 走腾讯行情；其余类型不自动获取。
+ *    触发时机：应用启动 + 用户点「更新行情」（**不做定时轮询**）。
+ * 2. **手动录入**（本 Sheet）：代码查不到、或类型不支持自动获取时的兜底。
+ *    手填默认 `MANUAL` 状态并如实标注来源 `manual`，**绝不伪装成外部源**。
  *
  * ## 三条硬规则
  *
@@ -31,6 +33,22 @@ export interface QuoteSheetProps {
   onChanged: () => void
   /** 预设标的 */
   initialInstrumentId?: string
+  /**
+   * 行情自动同步状态与「更新行情」入口（可选）。
+   *
+   * 不传时本面板退化为「只有手动录入」，便于测试单独渲染。
+   */
+  quoteSync?: {
+    busy: boolean
+    refresh: (instrumentIds?: string[]) => Promise<unknown>
+  }
+}
+
+/** 自动行情来源的可读标签 */
+const AUTO_QUOTE_SOURCE_LABEL: Record<string, string> = {
+  tencent: '自动 · 腾讯行情',
+  'eastmoney-fund': '自动 · 天天基金',
+  manual: '手动录入',
 }
 
 const KINDS: PriceKind[] = ['market_price', 'nav', 'estimated_nav', 'manual']
@@ -60,6 +78,7 @@ export default function QuoteSheet({
   repo,
   onChanged,
   initialInstrumentId,
+  quoteSync,
 }: QuoteSheetProps) {
   /** 需要行情的标的（排除现金：现金数量即金额，不需要行情） */
   const candidates = useMemo(
@@ -84,6 +103,55 @@ export default function QuoteSheet({
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
 
+  /*
+   * 自动获取的结果（供「确认是不是这只」用）。
+   *
+   * 为什么需要确认：1.0 没有这一步 —— 代码打错一个数字可能命中另一只
+   * 真实存在的基金，它的错误净值会被静默采信。这里把接口返回的名称
+   * 显示出来让用户核对，**但可跳过**（用户已知代码正确时不必多点一次）。
+   */
+  const [autoInfo, setAutoInfo] = useState<{
+    name: string
+    price: number
+    priceKind: PriceKind
+    asOf: string
+  } | null>(null)
+  const [autoError, setAutoError] = useState<string | null>(null)
+  const [autoBusy, setAutoBusy] = useState(false)
+
+  /** 当前标的的自动行情来源标签（读已落库的行情） */
+  const existingSourceLabel = existing
+    ? (AUTO_QUOTE_SOURCE_LABEL[existing.source] ?? existing.source)
+    : ''
+
+  /** 用当前标的的代码去拉一次行情 */
+  const fetchAuto = async () => {
+    if (!instrument || !quoteSync) return
+    setAutoBusy(true)
+    setAutoInfo(null)
+    setAutoError(null)
+    try {
+      const result = (await quoteSync.refresh([instrument.id])) as
+        | { outcomes?: { instrumentId: string; ok: boolean; fetchedName?: string; price?: number; priceKind?: PriceKind; asOf?: string; error?: string }[] }
+        | null
+      const hit = result?.outcomes?.find((o) => o.instrumentId === instrument.id)
+      if (!hit) {
+        setAutoError('未能获取行情，请稍后重试或手动填写')
+      } else if (!hit.ok) {
+        setAutoError(hit.error ?? '未查询到该代码')
+      } else {
+        setAutoInfo({
+          name: hit.fetchedName ?? instrument.name,
+          price: hit.price ?? 0,
+          priceKind: hit.priceKind ?? 'market_price',
+          asOf: hit.asOf ?? new Date().toISOString(),
+        })
+      }
+    } finally {
+      setAutoBusy(false)
+    }
+  }
+
   const pickInstrument = (id: string) => {
     setInstrumentId(id)
     const q = quoteOf(portfolio, id)
@@ -92,6 +160,8 @@ export default function QuoteSheet({
     setWhen(q ? fromIso(q.timestamp) : nowLocalInput())
     setError(null)
     setDone(null)
+    setAutoInfo(null)
+    setAutoError(null)
   }
 
   const submit = async () => {
@@ -128,7 +198,7 @@ export default function QuoteSheet({
       open={open}
       onClose={onClose}
       title="录入 / 更新行情"
-      subtitle="手动录入，不联网获取"
+      subtitle="可自动获取，也可手动录入"
       footer={
         <div className="flex gap-2">
           <button
@@ -153,10 +223,82 @@ export default function QuoteSheet({
       <p className="flex items-start gap-1.5 rounded-xl border border-line bg-s2 px-3 py-2 text-[11px] leading-relaxed text-ink3">
         <Info size={12} className="mt-0.5 shrink-0" />
         <span>
-          W6 阶段为**手动录入**：不会联网获取行情。
-          价格必须大于 0 —— <span className="text-ink2">无法估值时请留空，不要填 0</span>。
+          行情可**自动获取**：场外基金取单位净值、股票 / ETF 取市场价，
+          在应用启动和点「更新行情」时拉取（不做定时轮询）。
+          <span className="text-ink2">
+            查不到或类型不支持时再手动填写；价格必须大于 0 —— 无法估值时请留空，不要填 0。
+          </span>
         </span>
       </p>
+
+      {/* 当前标的的自动行情：来源 + 更新按钮 */}
+      {instrument && quoteSync ? (
+        <div className="mt-2 rounded-xl border border-line bg-s2 px-3 py-2" data-testid="quote-sync-bar">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-ink3" data-testid="quote-sync-status">
+              {autoBusy
+                ? '正在获取行情…'
+                : existingSourceLabel
+                  ? `当前行情来源：${existingSourceLabel}`
+                  : '尚未获取到自动行情'}
+            </span>
+            <button
+              type="button"
+              onClick={() => void fetchAuto()}
+              disabled={autoBusy || quoteSync.busy}
+              className="shrink-0 rounded-lg border border-line bg-s1 px-2.5 py-1 text-[11px] text-ink2 disabled:opacity-50"
+              data-testid="quote-fetch"
+            >
+              {autoBusy ? '获取中…' : '用代码获取'}
+            </button>
+          </div>
+
+          {autoError ? (
+            <p className="mt-1 text-[10px] tone-warn" data-testid="quote-fetch-error">
+              {autoError}
+            </p>
+          ) : null}
+
+          {/* 名称确认：显示查到的名字，可跳过 */}
+          {autoInfo ? (
+            <div className="mt-1.5 rounded-lg border border-line bg-s1 px-2.5 py-2" data-testid="quote-fetch-confirm">
+              <p className="text-[11px] text-ink2">
+                查到：<span className="text-ink">{autoInfo.name}</span>
+                {' · '}
+                {autoInfo.price.toLocaleString('zh-CN')} {instrument.currency}
+                <span className="text-ink4">
+                  {' '}
+                  （{PRICE_KIND_LABEL[autoInfo.priceKind]} · {new Date(autoInfo.asOf).toLocaleDateString('zh-CN')}）
+                </span>
+              </p>
+              <p className="mt-1 text-[10px] text-ink4">
+                请核对是不是这只。行情已自动入库；若名字不对，说明代码有误，可直接忽略本次结果。
+              </p>
+              <div className="mt-1.5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAutoInfo(null)}
+                  className="rounded-lg border border-line bg-s2 px-2.5 py-1 text-[11px] text-ink2"
+                  data-testid="quote-fetch-ok"
+                >
+                  是这只，知道了
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 跳过：不写任何东西，仅关掉提示（行情已入库，不受影响）
+                    setAutoInfo(null)
+                  }}
+                  className="rounded-lg px-2.5 py-1 text-[11px] text-ink4"
+                  data-testid="quote-fetch-skip"
+                >
+                  跳过
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {candidates.length === 0 ? (
         <p className="mt-3 text-[12px] text-ink4" data-testid="quote-empty">

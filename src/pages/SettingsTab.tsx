@@ -45,9 +45,18 @@ export interface SettingsTabProps {
     last: { source: string; syncedAt: string; error?: string } | null
     refresh: () => Promise<unknown>
   }
+  /**
+   * 行情自动同步状态与刷新入口（同样可选）。
+   *
+   * ⚠️ 行情只在「启动」和「点更新」时拉取，**不做定时轮询**。
+   */
+  quoteSync?: {
+    busy: boolean
+    refresh: (instrumentIds?: string[]) => Promise<unknown>
+  }
 }
 
-export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSync }: SettingsTabProps) {
+export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSync, quoteSync }: SettingsTabProps) {
   /** 行情 / 汇率覆盖率（纯读取，不改金额） */
   const coverage = useMemo(() => quoteCoverageOf(portfolio), [portfolio])
 
@@ -195,7 +204,8 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
       <section className="mt-3 rounded-2xl border border-line bg-s1 p-4" data-testid="market-data-info">
         <h2 className="text-[13px] font-medium text-ink">行情与汇率</h2>
         <p className="mt-1 text-[11px] text-ink4">
-          W6 阶段为手动录入，不联网获取行情。
+          行情可自动获取（场外基金取净值、股票 / ETF 取市场价），
+          在应用启动和点「更新行情」时拉取；汇率会自动获取并用库内兜底。查不到时可手动录入。
         </p>
         <dl className="mt-2 space-y-1 text-[12px]">
           <div className="flex justify-between">
@@ -230,6 +240,22 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
         </dl>
 
         <div className="mt-3 space-y-2">
+          {/* 一键更新全部可自动获取的行情（不做定时轮询，只在用户点的时候拉） */}
+          {quoteSync ? (
+            <button
+              type="button"
+              onClick={() => void quoteSync.refresh()}
+              disabled={quoteSync.busy}
+              className="flex w-full items-center justify-between rounded-2xl border border-line bg-s2 px-4 py-3 text-left text-[13px] text-ink2 disabled:opacity-50"
+              data-testid="refresh-all-quotes"
+            >
+              <span>更新全部行情</span>
+              <span className="text-[11px] text-ink4">
+                {quoteSync.busy ? '获取中…' : '按代码自动获取'}
+              </span>
+            </button>
+          ) : null}
+
           <button
             type="button"
             onClick={() => setQuoteOpen(true)}
@@ -369,6 +395,7 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
           onClose={() => setQuoteOpen(false)}
           portfolio={portfolio}
           repo={repo}
+          quoteSync={quoteSync}
           onChanged={onChanged}
         />
       ) : null}

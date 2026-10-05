@@ -3,6 +3,7 @@ import { Home, Layers, PieChart, Plus, TrendingUp, Settings as SettingsIcon } fr
 import { useMemo } from 'react'
 import { usePortfolio2 } from '../hooks/usePortfolio2'
 import { useFxAutoSync } from '../hooks/useFxAutoSync'
+import { useQuoteAutoSync } from '../hooks/useQuoteAutoSync'
 import { needsMigrationAttention, startupMigrationStatus } from '../lib/readOnly'
 import { ensureDailySnapshot } from '../lib/performance/dailySnapshot'
 import { createDexieRepository } from '../lib/db/dexieRepository'
@@ -139,6 +140,15 @@ export default function AppShell({
   const fxSync = useFxAutoSync(activeRepo, handleChanged)
 
   /*
+   * 行情自动同步（**只在启动时与用户点更新时**，不做定时轮询）。
+   *
+   * 只有 `fund` / `stock` / `etf` 三类能自动获取
+   * （按 `instrumentType` 路由，见 `quoteAutoFetch.routeFor`）；
+   * 其余类型保持手动录入，失败/未匹配都如实回报。
+   */
+  const quoteSync = useQuoteAutoSync(activeRepo, handleChanged)
+
+  /*
    * 启动迁移状态（W11 Blocker Patch，P1-6）。
    * `main.tsx` 在启动编排后写入；这里读取并在 UI 上明确展示。
    */
@@ -222,6 +232,7 @@ export default function AppShell({
         ) : (
           <SettingsTab
             fxSync={fxSync}
+            quoteSync={quoteSync}
             portfolio={data.portfolio}
             analysis={data.analysis}
             repo={activeRepo}
