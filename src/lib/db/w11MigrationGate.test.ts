@@ -72,7 +72,7 @@ describe('P1-6 迁移闸门：正常路径', () => {
   it('【核心】首次带旧数据 → 真实迁移成功', async () => {
     const { storage } = installStorage({ [LEGACY_KEY]: legacyPayload() })
     const { repo, db } = await createPairedTestStore(`w11-mig-${Date.now()}`)
-    const r = await migrateOnStart({ repo, db, storage })
+    const r = await migrateOnStart({ repo, db, storage, readLegacyData: true })
     expect(r.status).toBe('migrated')
     expect((await repo.counts()).instruments).toBeGreaterThan(0)
     await db.delete()
@@ -81,11 +81,11 @@ describe('P1-6 迁移闸门：正常路径', () => {
   it('【核心】迁移成功后再次启动 → skipped（不重复执行）', async () => {
     const { storage } = installStorage({ [LEGACY_KEY]: legacyPayload() })
     const { repo, db } = await createPairedTestStore(`w11-mig2-${Date.now()}`)
-    const first = await migrateOnStart({ repo, db, storage })
+    const first = await migrateOnStart({ repo, db, storage, readLegacyData: true })
     expect(first.status).toBe('migrated')
     const before = await repo.counts()
 
-    const second = await migrateOnStart({ repo, db, storage })
+    const second = await migrateOnStart({ repo, db, storage, readLegacyData: true })
     expect(second.status).toBe('skipped')
     const after = await repo.counts()
     expect(after.instruments).toBe(before.instruments)
@@ -96,7 +96,7 @@ describe('P1-6 迁移闸门：正常路径', () => {
   it('1.0 数据在迁移后仍然完整保留（不删除）', async () => {
     const { storage, map } = installStorage({ [LEGACY_KEY]: legacyPayload() })
     const { repo, db } = await createPairedTestStore(`w11-mig3-${Date.now()}`)
-    await migrateOnStart({ repo, db, storage })
+    await migrateOnStart({ repo, db, storage, readLegacyData: true })
     expect(map.get(LEGACY_KEY)).toBe(legacyPayload())
     await db.delete()
   })
@@ -117,7 +117,7 @@ describe('P1-6 闸门不再被「已有数据」永久关闭', () => {
       isLiability: false, createdAt: '2026-10-05T00:00:00.000Z', updatedAt: '2026-10-05T00:00:00.000Z',
     } as never)
 
-    const r = await migrateOnStart({ repo, db, storage })
+    const r = await migrateOnStart({ repo, db, storage, readLegacyData: true })
     // 关键：绝不能是 skipped（那会让迁移永久不再执行）
     expect(r.status).not.toBe('skipped')
     expect(r.status).toBe('incomplete')
@@ -137,7 +137,7 @@ describe('P1-6 闸门不再被「已有数据」永久关闭', () => {
     } as never)
 
     for (let i = 0; i < 3; i++) {
-      const r = await migrateOnStart({ repo, db, storage })
+      const r = await migrateOnStart({ repo, db, storage, readLegacyData: true })
       expect(r.status).toBe('incomplete')
     }
     await db.delete()
@@ -150,7 +150,7 @@ describe('P1-6 闸门不再被「已有数据」永久关闭', () => {
       id: 'acc_user', name: 'A', type: 'bank', currency: 'CNY', region: 'CN',
       isLiability: false, createdAt: '2026-10-05T00:00:00.000Z', updatedAt: '2026-10-05T00:00:00.000Z',
     } as never)
-    await migrateOnStart({ repo, db, storage })
+    await migrateOnStart({ repo, db, storage, readLegacyData: true })
     expect(map.get(LEGACY_KEY)).toBe(legacyPayload())
     await db.delete()
   })
@@ -180,7 +180,7 @@ describe('P1-6 全新用户路径不受影响', () => {
   it('无旧数据 + 空库 → no-legacy（不提示）', async () => {
     const { storage } = installStorage()
     const { repo, db } = await createPairedTestStore(`w11-fresh-${Date.now()}`)
-    const r = await migrateOnStart({ repo, db, storage })
+    const r = await migrateOnStart({ repo, db, storage, readLegacyData: true })
     expect(r.status).toBe('no-legacy')
     expect(needsMigrationAttention({ status: r.status, reason: r.reason })).toBe(false)
     await db.delete()
@@ -193,8 +193,60 @@ describe('P1-6 全新用户路径不受影响', () => {
       id: 'acc_user', name: 'A', type: 'bank', currency: 'CNY', region: 'CN',
       isLiability: false, createdAt: '2026-10-05T00:00:00.000Z', updatedAt: '2026-10-05T00:00:00.000Z',
     } as never)
-    const r = await migrateOnStart({ repo, db, storage })
+    const r = await migrateOnStart({ repo, db, storage, readLegacyData: true })
     expect(r.status).toBe('skipped')
+    await db.delete()
+  })
+})
+
+/* ================================================================== *
+ * ④ 双版本隔离：不显式开启就绝不迁移（事故回归）
+ * ================================================================== */
+
+/*
+ * 背景（真实事故）：2026-10-05 11:30–12:02，2.0 的构建被临时部署到了
+ * 1.0 的 URL 下，而当时启动路径没有显式传 `readLegacyData`、默认又是 `true`
+ * —— 一次页面加载就把用户的 1.0 数据**复制**进了同 origin 的 `wealthcard` 库。
+ *
+ * 因此默认值改为 `false`：迁移必须显式开启，误部署也不再可能跨版本污染。
+ */
+
+describe('双版本隔离：缺省不迁移', () => {
+  it('【核心】缺省调用 → no-legacy，既不动 1.x 数据也不写 2.0 数据', async () => {
+    const { storage, map } = installStorage({ [LEGACY_KEY]: legacyPayload() })
+    const before = map.get(LEGACY_KEY)
+    const { repo, db } = await createPairedTestStore(`w11-iso-${Date.now()}`)
+
+    const r = await migrateOnStart({ repo, db, storage })
+
+    expect(r.status).toBe('no-legacy')
+    const c = await repo.counts()
+    expect(c.accounts).toBe(0)
+    expect(c.instruments).toBe(0)
+    expect(c.holdings).toBe(0)
+    // 1.x 的键原样保留，一个字节都没改
+    expect(map.get(LEGACY_KEY)).toBe(before)
+    await db.delete()
+  })
+
+  it('显式 readLegacyData: false 与缺省等价（2.0 启动路径）', async () => {
+    const { storage, map } = installStorage({ [LEGACY_KEY]: legacyPayload() })
+    const before = map.get(LEGACY_KEY)
+    const { repo, db } = await createPairedTestStore(`w11-iso2-${Date.now()}`)
+
+    const r = await migrateOnStart({ repo, db, storage, readLegacyData: false })
+
+    expect(r.status).toBe('no-legacy')
+    expect((await repo.counts()).instruments).toBe(0)
+    expect(map.get(LEGACY_KEY)).toBe(before)
+    await db.delete()
+  })
+
+  it('只有显式 true 才迁移（能力保留，不删功能）', async () => {
+    const { storage } = installStorage({ [LEGACY_KEY]: legacyPayload() })
+    const { repo, db } = await createPairedTestStore(`w11-iso3-${Date.now()}`)
+    const r = await migrateOnStart({ repo, db, storage, readLegacyData: true })
+    expect(r.status).toBe('migrated')
     await db.delete()
   })
 })

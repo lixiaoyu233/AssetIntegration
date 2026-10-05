@@ -205,21 +205,29 @@ export async function migrateOnStart(options: {
   db: WealthCardDb
   storage?: Storage
   /**
-   * 是否读取并迁移 **1.x 的 localStorage 遗留数据**（默认 `true`）。
+   * 是否读取并迁移 **1.x 的 localStorage 遗留数据**（**默认 `false`**）。
    *
-   * ## 为什么需要这个开关（双版本并存）
+   * ## 为什么默认「不迁移」（双版本并存）
    *
-   * 2.0「资产整合」与 1.0 是两个**独立产品**，可部署在同一 origin 的
-   * 不同子路径下（例如 `/AssetIntegration/` 与 `/WealthCard/`）。
+   * 2.0「资产整合」与 1.0 是两个**独立产品**，部署在同一 origin 的
+   * 不同子路径下（`/AssetIntegration/` 与 `/WealthCard/`）。
    *
-   * ⚠️ `localStorage` **按 origin 隔离、不按路径隔离** —— 因此 2.0 一旦启动
-   * 就会读到 1.0 的 `asset-card-wallet/*` 键，把 1.0 数据迁移进自己的
-   * IndexedDB，并 `setReadOnlyMode(true)` 让 **1.0 界面变成只读**。
+   * ⚠️ `localStorage` **按 origin 隔离、不按路径隔离** —— 一旦读取，
+   * 2.0 就会把 1.0 的 `asset-card-wallet/*` 迁移进自己的 IndexedDB，
+   * 并 `setReadOnlyMode(true)` 让 **1.0 界面变成只读**。
+   * 这违反「两版本不互读、不迁移、不覆盖」。
    *
-   * 这违反「两版本不互读、不迁移、不覆盖」，因此在 2.0 启动路径上显式传 `false`。
+   * ## ⚠️ 默认值曾经是 `true`，已发生真实事故
    *
-   * ⚠️ **默认仍是 `true`**：保留本函数原有行为（已被测试覆盖）。
-   * 传 `false` 时不读取任何 1.x 数据、**不删除也不写入任何键**。
+   * 2026-10-05 11:30–12:02，2.0 的构建被临时部署到了 1.0 的 URL 下，
+   * 而那时启动路径还没有显式传 `false`、默认又是 `true` ——
+   * 一次页面加载就把用户的 1.0 数据**复制**进了同 origin 的 `wealthcard` 库，
+   * 两个产品从此共用一份数据。
+   *
+   * 改成默认 `false` 之后，**即使再发生同类误部署，也不可能跨版本污染**。
+   * 迁移能力保留，但必须**显式传 `true`** 才开启。
+   *
+   * 传入非 `true`（含缺省）时不读取任何 1.x 数据、**不删除也不写入任何键**。
    */
   readLegacyData?: boolean
   now?: () => Date
@@ -239,9 +247,9 @@ export async function migrateOnStart(options: {
      * 只开启只读（2.0 自身的事实源是 IndexedDB，不写 localStorage 业务键），
      * 并如实返回 `no-legacy` —— 既不谎报迁移成功，也不改动任何既有数据。
      */
-    if (options.readLegacyData === false) {
-      setReadOnlyMode(true, '独立部署：不读取旧版 localStorage 数据')
-      return { status: 'no-legacy', readOnly: true, reason: '已关闭遗留数据迁移（独立部署）' }
+    if (options.readLegacyData !== true) {
+      setReadOnlyMode(true, '双版本隔离：不读取旧版 localStorage 数据')
+      return { status: 'no-legacy', readOnly: true, reason: '未开启遗留数据迁移（1.0 / 2.0 隔离）' }
     }
 
     const hasLegacy = hasLegacyData(legacyStorage as never)

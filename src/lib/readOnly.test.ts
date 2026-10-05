@@ -548,7 +548,7 @@ describe('① 启动迁移：幂等、校验、只读时机', () => {
     const statuses: string[] = []
 
     for (let i = 0; i < 3; i++) {
-      const r = await migrateOnStart({ repo, db, storage: storage as never })
+      const r = await migrateOnStart({ repo, db, storage: storage as never, readLegacyData: true })
       statuses.push(r.status)
       const c = await repo.counts()
       counts.push(c.holdings + c.accounts + c.instruments)
@@ -572,7 +572,7 @@ describe('① 启动迁移：幂等、校验、只读时机', () => {
     resetReadOnlyMode()
 
     const { repo, db } = await createPairedTestStore(`w1-ro-${Date.now()}`)
-    const r = await migrateOnStart({ repo, db, storage: storage as never })
+    const r = await migrateOnStart({ repo, db, storage: storage as never, readLegacyData: true })
     expect(r.status).toBe('migrated')
     expect(r.readOnly).toBe(true)
     expect(isReadOnlyMode()).toBe(true)
@@ -586,7 +586,7 @@ describe('① 启动迁移：幂等、校验、只读时机', () => {
     seedLegacyPortfolio(storage)
 
     const { repo, db } = await createPairedTestStore(`w1-read-${Date.now()}`)
-    await migrateOnStart({ repo, db, storage: storage as never })
+    await migrateOnStart({ repo, db, storage: storage as never, readLegacyData: true })
 
     const portfolio = await repo.loadPortfolio()
     expect(portfolio.holdings.length).toBeGreaterThan(0)
@@ -603,7 +603,7 @@ describe('① 启动迁移：幂等、校验、只读时机', () => {
     const before = fingerprint(storage)
 
     const { repo: r2, db: d2 } = await createPairedTestStore(`w1-keep-${Date.now()}`)
-    await migrateOnStart({ repo: r2, db: d2, storage: storage as never })
+    await migrateOnStart({ repo: r2, db: d2, storage: storage as never, readLegacyData: true })
 
     expect(fingerprint(storage)).toBe(before)
     expect(storage.getItem('asset-card-wallet/portfolio/v2')).not.toBeNull()
@@ -616,7 +616,7 @@ describe('① 启动迁移：幂等、校验、只读时机', () => {
     resetReadOnlyMode()
 
     const { repo, db } = await createPairedTestStore(`w1-nolegacy-${Date.now()}`)
-    const r = await migrateOnStart({ repo, db })
+    const r = await migrateOnStart({ repo, db, readLegacyData: true })
     expect(r.status).toBe('no-legacy')
     expect(isReadOnlyMode()).toBe(true)
     await db.delete()

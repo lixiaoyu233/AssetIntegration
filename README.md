@@ -562,14 +562,22 @@ const result = await migrateOnStart({ repo, db, readLegacyData: false })
 `asset-card-wallet/*` 键。若不加这个开关，2.0 启动会把 1.0 数据迁移进自己的
 IndexedDB，并调用 `setReadOnlyMode(true)` 把 **1.0 界面变成只读**。
 
-`readLegacyData: false` 的效果：
+**`readLegacyData` 的默认值是 `false`（不迁移）**，迁移必须显式传 `true`：
+
 - **不读取**任何 `asset-card-wallet/*` 键；
 - **不删除、不改写**任何键；
 - 只开启只读（2.0 自身的事实源是 IndexedDB，不写 localStorage 业务键）；
 - 如实返回 `status: 'no-legacy'`，不谎报迁移成功。
 
-`migrateOnStart` 的该选项**默认是 `true`**（保留原有行为与测试语义），
-只有 2.0 的启动路径显式传 `false`。
+> ⚠️ **这个默认值是踩过事故才改的。**
+> 2026-10-05 11:30–12:02，2.0 的构建被临时部署到了 1.0 的 URL（`/WealthCard/`）下，
+> 而那时启动路径还没显式传 `false`、默认又是 `true` —— **一次页面加载**就把用户的
+> 1.0 数据**复制**进了同 origin 的 `wealthcard` 库，两个产品从此共用一份数据。
+> （1.0 的 localStorage 原件未被删除，只是被复制。）
+>
+> 改成默认 `false` 之后，**即使再发生同类误部署，也不可能跨版本污染**；
+> 迁移能力保留，但必须显式开启。回归测试在
+> `lib/db/w11MigrationGate.test.ts` 的「双版本隔离：缺省不迁移」。
 
 > **改这一块时的红线**：不要让 2.0 读写 `asset-card-wallet/*`。
 > `legacyStore.ts` 里的读取器与 `removeLegacyData()` 是给 1.x 迁移场景用的，

@@ -74,6 +74,10 @@ async function bootstrap(): Promise<void> {
      * 违反「两版本不互读、不迁移、不覆盖」。
      *
      * 1.0 的数据与界面完全不受影响。
+     *
+     * 注：`readLegacyData` 的默认值现在**就是 `false`**（见该选项的注释，
+     * 那里记录了误部署导致真实事故的经过）。这里仍显式写出，
+     * 是为了让「2.0 不迁移」在启动路径上一眼可见，不依赖默认值。
      */
     const result = await migrateOnStart({ repo, db, readLegacyData: false })
     /*
