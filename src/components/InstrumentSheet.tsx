@@ -90,7 +90,7 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
             type="button"
             disabled={busy}
             onClick={() => void submit()}
-            className="flex-1 rounded-xl bg-ink py-2.5 text-[13px] text-s1 disabled:opacity-50"
+            className="flex-1 rounded-xl bg-invert py-2.5 text-[13px] text-on-invert disabled:opacity-50"
             data-testid="instrument-save"
           >
             {busy ? '创建中…' : '创建'}

@@ -176,7 +176,7 @@ export default function HistoryTab({ trend, portfolio, repo, onChanged }: Histor
           type="button"
           onClick={() => setView('flows')}
           className={`rounded-full border px-3 py-1 text-[12px] ${
-            view === 'flows' ? 'border-ink bg-ink text-s1' : 'border-line bg-s1 text-ink2'
+            view === 'flows' ? 'border-invert bg-invert text-on-invert' : 'border-line bg-s1 text-ink2'
           }`}
           data-testid="view-flows"
         >
@@ -186,7 +186,7 @@ export default function HistoryTab({ trend, portfolio, repo, onChanged }: Histor
           type="button"
           onClick={() => setView('snapshots')}
           className={`rounded-full border px-3 py-1 text-[12px] ${
-            view === 'snapshots' ? 'border-ink bg-ink text-s1' : 'border-line bg-s1 text-ink2'
+            view === 'snapshots' ? 'border-invert bg-invert text-on-invert' : 'border-line bg-s1 text-ink2'
           }`}
           data-testid="view-snapshots"
         >

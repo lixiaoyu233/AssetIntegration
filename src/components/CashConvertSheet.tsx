@@ -226,7 +226,7 @@ export default function CashConvertSheet({
                       type="button"
                       disabled={busy}
                       onClick={() => void convert()}
-                      className="flex-1 rounded-lg bg-ink py-1.5 text-[12px] text-s1 disabled:opacity-50"
+                      className="flex-1 rounded-lg bg-invert py-1.5 text-[12px] text-on-invert disabled:opacity-50"
                       data-testid="cash-confirm"
                     >
                       确认转换

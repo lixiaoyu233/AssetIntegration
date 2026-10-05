@@ -176,7 +176,7 @@ export default function ClassifySheet({
               type="button"
               disabled={busy}
               onClick={() => void confirmAllPicked()}
-              className="flex-1 rounded-xl bg-ink py-2.5 text-[13px] text-s1 disabled:opacity-50"
+              className="flex-1 rounded-xl bg-invert py-2.5 text-[13px] text-on-invert disabled:opacity-50"
               data-testid="confirm-picked"
             >
               确认已选类别
@@ -252,7 +252,7 @@ export default function ClassifySheet({
                     type="button"
                     disabled={busy || !pending[inst.id]}
                     onClick={() => void confirm(inst)}
-                    className="rounded-lg bg-ink px-3 py-1.5 text-[12px] text-s1 disabled:opacity-40"
+                    className="rounded-lg bg-invert px-3 py-1.5 text-[12px] text-on-invert disabled:opacity-40"
                     data-testid="classify-confirm-one"
                   >
                     确认

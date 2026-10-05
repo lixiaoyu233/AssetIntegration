@@ -245,7 +245,7 @@ export default function AppShell({
       <button
         type="button"
         onClick={() => setTxOpen(true)}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+62px)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-[13px] text-s1 shadow-lg"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+62px)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-invert px-4 py-2.5 text-[13px] text-on-invert shadow-lg"
         data-testid="fab-record"
         aria-label="记一笔"
       >

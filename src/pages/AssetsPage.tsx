@@ -368,7 +368,7 @@ export default function AssetsPage({
             type="button"
             onClick={() => setDimension(d)}
             className={`rounded-full border px-3 py-1 text-[12px] ${
-              dimension === d ? 'border-ink bg-ink text-s1' : 'border-line bg-s1 text-ink2'
+              dimension === d ? 'border-invert bg-invert text-on-invert' : 'border-line bg-s1 text-ink2'
             }`}
             data-testid={`dim-${d}`}
           >

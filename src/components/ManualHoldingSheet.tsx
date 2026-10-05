@@ -94,7 +94,7 @@ export default function ManualHoldingSheet({
             type="button"
             disabled={busy || !instrumentId}
             onClick={() => void submit()}
-            className="flex-1 rounded-xl bg-ink py-2.5 text-[13px] text-s1 disabled:opacity-50"
+            className="flex-1 rounded-xl bg-invert py-2.5 text-[13px] text-on-invert disabled:opacity-50"
             data-testid="manual-save"
           >
             {busy ? '保存中…' : '保存'}

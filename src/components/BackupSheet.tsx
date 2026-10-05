@@ -180,7 +180,7 @@ export default function BackupSheet({ open, onClose, repo, onChanged }: BackupSh
           type="button"
           disabled={busy}
           onClick={() => void doExport()}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink py-2.5 text-[13px] text-s1 disabled:opacity-50"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-invert py-2.5 text-[13px] text-on-invert disabled:opacity-50"
           data-testid="backup-export"
         >
           <Download size={14} />
@@ -260,7 +260,7 @@ export default function BackupSheet({ open, onClose, repo, onChanged }: BackupSh
             type="button"
             disabled={busy}
             onClick={() => void doRestore()}
-            className="mt-2 w-full rounded-xl bg-ink py-2.5 text-[13px] text-s1 disabled:opacity-50"
+            className="mt-2 w-full rounded-xl bg-invert py-2.5 text-[13px] text-on-invert disabled:opacity-50"
             data-testid="backup-restore"
           >
             {busy ? '导入中…' : '确认导入（将替换当前数据）'}

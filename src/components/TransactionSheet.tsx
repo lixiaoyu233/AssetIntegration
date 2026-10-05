@@ -252,7 +252,7 @@ export default function TransactionSheet({
             type="button"
             disabled={busy}
             onClick={() => void submit()}
-            className="flex-1 rounded-xl bg-ink py-2.5 text-[13px] text-s1 disabled:opacity-50"
+            className="flex-1 rounded-xl bg-invert py-2.5 text-[13px] text-on-invert disabled:opacity-50"
             data-testid="tx-submit"
           >
             {busy ? '记录中…' : '记录'}
@@ -272,7 +272,7 @@ export default function TransactionSheet({
                   type="button"
                   onClick={() => changeType(s.type)}
                   className={`rounded-full border px-3 py-1 text-[12px] ${
-                    type === s.type ? 'border-ink bg-ink text-s1' : 'border-line bg-s1 text-ink2'
+                    type === s.type ? 'border-invert bg-invert text-on-invert' : 'border-line bg-s1 text-ink2'
                   }`}
                   data-testid={`tx-type-${s.type}`}
                 >

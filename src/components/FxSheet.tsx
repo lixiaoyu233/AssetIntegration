@@ -151,7 +151,7 @@ export default function FxSheet({ open, onClose, portfolio, repo, onChanged, fxS
             type="button"
             disabled={busy}
             onClick={() => void submit()}
-            className="flex-1 rounded-xl bg-ink py-2.5 text-[13px] text-s1 disabled:opacity-50"
+            className="flex-1 rounded-xl bg-invert py-2.5 text-[13px] text-on-invert disabled:opacity-50"
             data-testid="fx-save"
           >
             {busy ? '保存中…' : '保存'}
