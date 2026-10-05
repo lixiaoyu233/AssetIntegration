@@ -86,7 +86,11 @@
     <script>
       (function () {
         try {
-          var saved = localStorage.getItem('asset-card-wallet/theme')
+          /*
+               * 键必须与 src/hooks/useTheme.ts 的 THEME_STORAGE_KEY 一致，
+               * 且与 1.0 分开 —— 两个版本同 origin，共用键会互相影响主题。
+               */
+              var saved = localStorage.getItem('wealthcard/theme')
           var theme =
             saved === 'light' || saved === 'dark'
               ? saved

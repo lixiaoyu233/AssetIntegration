@@ -5,7 +5,22 @@ export type ThemeMode = 'system' | 'light' | 'dark'
 /** 最终生效的主题（system 会被解析成 light 或 dark） */
 export type ResolvedTheme = 'light' | 'dark'
 
-export const THEME_STORAGE_KEY = 'asset-card-wallet/theme'
+/**
+ * 主题偏好的存储键。
+ *
+ * ⚠️ **必须与 1.0 分开**。
+ *
+ * 1.0 用的是 `asset-card-wallet/theme`（1.0 的命名空间）。两个版本部署在
+ * 同一 origin 的不同子路径下，而 `localStorage` **按 origin 隔离、不按路径隔离** ——
+ * 若共用同一个键，用户在 1.0 切到日间，2.0 也会跟着变日间（哪怕系统是深色），
+ * 且 2.0 的切换会改掉 1.0 的偏好。这违反「两版本互不干扰」。
+ *
+ * 2.0 统一使用 `wealthcard/*` 前缀（与 `wealthcard/ui/active-tab` 一致）。
+ */
+export const THEME_STORAGE_KEY = 'wealthcard/theme'
+
+/** 1.0 用的旧键 —— **2.0 绝不读写**，此处仅作文档记录 */
+export const LEGACY_THEME_STORAGE_KEY = 'asset-card-wallet/theme'
 
 /** 浏览器状态栏 / 地址栏颜色，与两套主题的页面底色保持一致 */
 export const THEME_COLOR: Record<ResolvedTheme, string> = {

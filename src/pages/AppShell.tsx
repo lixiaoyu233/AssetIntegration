@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Home, Layers, PieChart, Plus, TrendingUp, Settings as SettingsIcon } from 'lucide-react'
 import { useMemo } from 'react'
 import { usePortfolio2 } from '../hooks/usePortfolio2'
+import { useTheme } from '../hooks/useTheme'
 import { useFxAutoSync } from '../hooks/useFxAutoSync'
 import { useQuoteAutoSync } from '../hooks/useQuoteAutoSync'
 import { needsMigrationAttention, startupMigrationStatus } from '../lib/readOnly'
@@ -92,6 +93,19 @@ export default function AppShell({
   const [txOpen, setTxOpen] = useState(false)
   // 仓储只建一次，并向所有子组件注入同一实例（避免读写不同实例）
   const activeRepo = useMemo(() => repo ?? createDexieRepository(), [repo])
+
+  /*
+   * 主题：默认「跟随系统」，并在系统主题切换时**实时**跟随。
+   *
+   * 为什么必须在这里调用：
+   * `index.html` 的首屏内联脚本只在**页面加载时**定一次 `data-theme`
+   * （防闪白），它没有监听 `matchMedia`。因此「运行中系统切换主题」
+   * （iOS 的日落自动切换、桌面夜间模式定时）需要这个 hook 来接管。
+   *
+   * ⚠️ 用的是 2.0 自己的键 `wealthcard/theme`，**不读 1.0 的
+   * `asset-card-wallet/theme`** —— 两版本同 origin，共用键会互相影响。
+   */
+  useTheme()
   const { data, loading, error, daily, reload } = usePortfolio2(activeRepo)
 
   useEffect(() => {
