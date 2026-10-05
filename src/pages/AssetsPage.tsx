@@ -19,6 +19,8 @@ import QuoteSheet from '../components/QuoteSheet'
 import AccountSheet from '../components/AccountSheet'
 import InstrumentSheet from '../components/InstrumentSheet'
 import ManualHoldingSheet from '../components/ManualHoldingSheet'
+import AccountEditSheet from '../components/AccountEditSheet'
+import ManualHoldingEditSheet from '../components/ManualHoldingEditSheet'
 import ColdStartGuide from '../components/ColdStartGuide'
 import { coldStartStateOf } from '../lib/db/creation'
 import {
@@ -128,6 +130,14 @@ export default function AssetsPage({
    */
   const liabilityConflicts = useMemo(() => findLiabilityConflicts(portfolio), [portfolio])
   const [manualOpen, setManualOpen] = useState(false)
+  /*
+   * 编辑既有数据（P1-7）。
+   *
+   * 用「id 而非对象」做状态：对象会在每次重派生后被替换成新引用，
+   * 而 id 始终指向同一个账户/持仓，弹窗里的初值也更稳定。
+   */
+  const [editAccountId, setEditAccountId] = useState<string | undefined>(undefined)
+  const [editHoldingId, setEditHoldingId] = useState<string | undefined>(undefined)
 
   const coldStart = useMemo(() => coldStartStateOf(portfolio), [portfolio])
 
@@ -184,6 +194,21 @@ export default function AssetsPage({
     () => new Map(portfolio.accounts.map((a) => [a.id, a])),
     [portfolio.accounts],
   )
+
+  /**
+   * 当前正在编辑的目标。
+   *
+   * ⚠️ 持仓侧**只认 manual 口径** —— 由交易派生的持仓是缓存，
+   * 改它会被下一次重建覆盖（领域层也会再次拒绝，这里是第一道闸）。
+   */
+  const editingAccount = editAccountId ? accountById.get(editAccountId) : undefined
+  const editingHolding = editHoldingId
+    ? portfolio.holdings.find((h) => h.id === editHoldingId && h.valuationMode === 'manual')
+    : undefined
+
+  /** 该行是否为手动口径持仓：只有它能直接改金额 / 删除 */
+  const manualHoldingOf = (holdingId: string) =>
+    portfolio.holdings.find((h) => h.id === holdingId && h.valuationMode === 'manual')
 
   /** 当前维度下的分组（只做分组，不做金额重算 —— 金额取自 AnalysisView） */
   const buckets = useMemo(() => {
@@ -395,6 +420,18 @@ export default function AssetsPage({
                     <span className="w-12 text-right text-ink3">
                       {b.share === undefined ? '—' : `${(b.share * 100).toFixed(1)}%`}
                     </span>
+                    {/* 账户维度：bucket.key 就是 accountId，可直接进入编辑（P1-7） */}
+                    {dimension === 'accounts' && accountById.get(b.key) ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditAccountId(b.key)}
+                        className="shrink-0 rounded border border-line px-1.5 py-0.5 text-[10px] text-ink3"
+                        data-testid="bucket-edit-account"
+                        data-account-id={b.key}
+                      >
+                        编辑
+                      </button>
+                    ) : null}
                   </div>
                   {/* 币种维度额外展示原币，避免不同币种被直接相加 */}
                   {b.nativeTotal !== undefined ? (
@@ -534,6 +571,19 @@ export default function AssetsPage({
                       录入行情
                     </button>
                   ) : null}
+
+                  {/* 手动口径持仓可改金额 / 删除（P1-7）；派生持仓不显示此入口 */}
+                  {manualHoldingOf(row.holdingId) ? (
+                    <button
+                      type="button"
+                      onClick={() => setEditHoldingId(row.holdingId)}
+                      className="mt-1.5 rounded border border-line px-1.5 py-0.5 text-[10px] text-ink3"
+                      data-testid="row-edit-manual"
+                      data-holding-id={row.holdingId}
+                    >
+                      编辑金额
+                    </button>
+                  ) : null}
                 </li>
               )
             })}
@@ -593,6 +643,33 @@ export default function AssetsPage({
           portfolio={portfolio}
           repo={repo}
           onCreated={onChanged}
+        />
+      ) : null}
+
+      {editingAccount ? (
+        <AccountEditSheet
+          open
+          account={editingAccount}
+          repo={repo}
+          onClose={() => setEditAccountId(undefined)}
+          onSaved={() => {
+            setEditAccountId(undefined)
+            onChanged()
+          }}
+        />
+      ) : null}
+
+      {editingHolding ? (
+        <ManualHoldingEditSheet
+          open
+          holding={editingHolding}
+          instrument={instrumentById.get(editingHolding.instrumentId)}
+          repo={repo}
+          onClose={() => setEditHoldingId(undefined)}
+          onSaved={() => {
+            setEditHoldingId(undefined)
+            onChanged()
+          }}
         />
       ) : null}
 
