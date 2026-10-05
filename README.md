@@ -399,7 +399,24 @@ pnpm preview            # 本地预览构建产物
 **Node 必须 ≥ 22.13**（`pnpm@11.7.0` 用到 `node:sqlite`；Node 20 会抛
 `ERR_UNKNOWN_BUILTIN_MODULE`）。
 
-### 8.2 测试约定
+### 8.2 图标（与 1.0 刻意区分）
+
+图标不是手画的位图，而是**同一份视觉稿**的两个形态：
+
+| 文件 | 作用 |
+| --- | --- |
+| `public/favicon.svg` | 矢量稿，浏览器标签页图标 |
+| `public/icons/*.png` | 位图稿，由脚本从同一视觉稿渲染（iOS 只认 PNG） |
+| `scripts/gen-icons.cjs` | 渲染脚本：`node scripts/gen-icons.cjs`（需要 `playwright`，仅本地工具，不进依赖） |
+
+视觉语义：**三根青→靛蓝的层叠上升柱 + 底部聚合底盘 + 顶端金色圆点**
+（= 多个来源汇总成一个数），底板深墨蓝 `#070b14`。
+与 1.0「纯黑底 + 金色单张卡片」在桌面上一眼可区分。
+
+> ⚠️ 改图标时**必须同时更新** `favicon.svg`（矢量）与 `gen-icons.cjs`（位图渲染），
+> 然后重跑脚本，否则标签页图标与桌面图标会不一致。
+
+### 8.3 测试约定
 
 - 框架 Vitest，环境 `node`，`src/test/setup.ts` 注入 `fake-indexeddb`。
 - 测试文件与源码同目录：`*.test.ts`。
@@ -407,7 +424,7 @@ pnpm preview            # 本地预览构建产物
   需要验证 Dexie 真实行为时用 `createPairedTestStore(name)`。
 - 联网接口用例用 `describe.skipIf / it.skipIf` 条件跳过，CI 设 `ACW_SKIP_API=1`。
 
-### 8.3 部署（GitHub Pages）
+### 8.4 部署（GitHub Pages）
 
 `.github/workflows/deploy.yml` 在 `push main` 时执行：
 
@@ -422,7 +439,7 @@ checkout → setup pnpm → setup node 22 → pnpm install --frozen-lockfile
 - **无 Service Worker、无 cache API** → 不存在缓存互顶问题。
 - **无外部字体 / CDN**。
 
-### 8.4 网络行为（重要，容易误判）
+### 8.5 网络行为（重要，容易误判）
 
 **2.0 的功能路径不联网。** 行情与汇率全部由用户手动录入
 （`valuation/priceService.ts`），估值只读 IndexedDB 里的 `quotes` / `fxRates`，
