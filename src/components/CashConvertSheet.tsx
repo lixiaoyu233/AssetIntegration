@@ -202,7 +202,7 @@ export default function CashConvertSheet({
               data-testid="cash-row"
               data-holding-id={holding.id}
             >
-              <p className="truncate text-[13px] text-ink">{instrument.name}</p>
+              <p className="truncate text-[13px] text-ink1">{instrument.name}</p>
               <p className="mt-0.5 text-[11px] text-ink4">
                 手动金额 {amount.toLocaleString('zh-CN')} {instrument.currency}
               </p>

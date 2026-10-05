@@ -391,7 +391,7 @@ export default function AssetsPage({
                 <li key={b.key} className="text-[12px]">
                   <div className="flex items-center gap-2">
                     <span className="flex-1 text-ink2">{b.label}</span>
-                    <span className="text-ink">{cny(b.valueCny)}</span>
+                    <span className="text-ink1">{cny(b.valueCny)}</span>
                     <span className="w-12 text-right text-ink3">
                       {b.share === undefined ? '—' : `${(b.share * 100).toFixed(1)}%`}
                     </span>
@@ -440,7 +440,7 @@ export default function AssetsPage({
                 >
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] text-ink">{inst?.name ?? row.instrumentName}</p>
+                      <p className="truncate text-[13px] text-ink1">{inst?.name ?? row.instrumentName}</p>
                       <p className="mt-0.5 text-[11px] text-ink4">
                         {account?.name ?? row.accountName}
                         {' · '}
@@ -459,7 +459,7 @@ export default function AssetsPage({
                     <div className="shrink-0 text-right">
                       {/* stale 与 unavailable 绝不显示成 0 */}
                       {row.status === 'ok' && row.valueCny !== undefined ? (
-                        <p className="text-[13px] text-ink">{cny(row.valueCny)}</p>
+                        <p className="text-[13px] text-ink1">{cny(row.valueCny)}</p>
                       ) : row.status === 'stale' ? (
                         <>
                           {/*

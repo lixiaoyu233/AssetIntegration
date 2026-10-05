@@ -263,7 +263,7 @@ export default function QuoteSheet({
           {autoInfo ? (
             <div className="mt-1.5 rounded-lg border border-line bg-s1 px-2.5 py-2" data-testid="quote-fetch-confirm">
               <p className="text-[11px] text-ink2">
-                查到：<span className="text-ink">{autoInfo.name}</span>
+                查到：<span className="text-ink1">{autoInfo.name}</span>
                 {' · '}
                 {autoInfo.price.toLocaleString('zh-CN')} {instrument.currency}
                 <span className="text-ink4">
@@ -311,7 +311,7 @@ export default function QuoteSheet({
             <select
               value={instrumentId}
               onChange={(e) => pickInstrument(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="quote-instrument"
             >
               {candidates.map((i) => (
@@ -345,7 +345,7 @@ export default function QuoteSheet({
             <select
               value={priceKind}
               onChange={(e) => setPriceKind(e.target.value as PriceKind)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="quote-kind"
             >
               {KINDS.map((k) => (
@@ -363,7 +363,7 @@ export default function QuoteSheet({
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="留空表示暂无行情"
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="quote-price"
             />
           </label>
@@ -374,7 +374,7 @@ export default function QuoteSheet({
               type="datetime-local"
               value={when}
               onChange={(e) => setWhen(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="quote-timestamp"
             />
           </label>

@@ -128,7 +128,7 @@ export default function ManualHoldingSheet({
                 setAccountId(e.target.value)
                 setInstrumentId('')
               }}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="manual-account"
             >
               {portfolio.accounts.map((a) => (
@@ -144,7 +144,7 @@ export default function ManualHoldingSheet({
             <select
               value={instrumentId}
               onChange={(e) => setInstrumentId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="manual-instrument"
             >
               <option value="">请选择…</option>
@@ -168,7 +168,7 @@ export default function ManualHoldingSheet({
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder="例如 2500000"
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="manual-value"
             />
           </label>
@@ -178,7 +178,7 @@ export default function ManualHoldingSheet({
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="manual-note"
             />
           </label>

@@ -40,7 +40,7 @@ function GroupCard({ group }: { group: DuplicateGroup }) {
   const lines = describeDuplicate(group)
   return (
     <li className="rounded-2xl border border-line bg-s1 p-3" data-testid="duplicate-row" data-key={group.key}>
-      <p className="text-[13px] text-ink">
+      <p className="text-[13px] text-ink1">
         {group.accountName ?? group.accountId}
         <span className="mx-1 text-ink4">·</span>
         {group.instrumentName ?? group.instrumentId}

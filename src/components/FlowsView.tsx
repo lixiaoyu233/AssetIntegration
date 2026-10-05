@@ -57,7 +57,7 @@ export default function FlowsView({
           <select
             value={accountFilter}
             onChange={(e) => onAccountFilter(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="filter-account"
           >
             <option value="">全部账户</option>
@@ -74,7 +74,7 @@ export default function FlowsView({
           <select
             value={typeFilter}
             onChange={(e) => onTypeFilter(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="filter-type"
           >
             <option value="">全部类型</option>
@@ -91,7 +91,7 @@ export default function FlowsView({
           <select
             value={statusFilter}
             onChange={(e) => onStatusFilter(e.target.value as 'all' | 'active')}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="filter-status"
           >
             {/* 默认含已作废：作废是审计事实，用户需要能看到全貌 */}
@@ -131,7 +131,7 @@ export default function FlowsView({
                 >
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className={`text-[13px] ${voided ? 'text-ink3 line-through' : 'text-ink'}`}>
+                      <p className={`text-[13px] ${voided ? 'text-ink3 line-through' : 'text-ink1'}`}>
                         {TRANSACTION_TYPE_LABEL[tx.type] ?? tx.type}
                         {/* 状态标签：有效 / 已作废 */}
                         <span
@@ -170,7 +170,7 @@ export default function FlowsView({
                       ) : null}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-[13px] text-ink">{n(tx.amount, tx.currency)}</p>
+                      <p className="text-[13px] text-ink1">{n(tx.amount, tx.currency)}</p>
                       {tx.quantity !== undefined ? (
                         <p className="text-[11px] text-ink4">数量 {tx.quantity}</p>
                       ) : null}

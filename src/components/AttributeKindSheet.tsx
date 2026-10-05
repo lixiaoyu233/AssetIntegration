@@ -197,7 +197,7 @@ export default function AttributeKindSheet({
             <select
               value={selectedId ?? ''}
               onChange={(e) => pick(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="attr-instrument"
             >
               {portfolio.instruments.map((i) => (
@@ -216,7 +216,7 @@ export default function AttributeKindSheet({
                 <input
                   value={current.name}
                   onChange={(e) => setDraft({ ...current, name: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
                   data-testid="attr-name"
                 />
               </label>
@@ -226,7 +226,7 @@ export default function AttributeKindSheet({
                 <input
                   value={current.symbol}
                   onChange={(e) => setDraft({ ...current, symbol: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
                   data-testid="attr-symbol"
                 />
               </label>
@@ -238,7 +238,7 @@ export default function AttributeKindSheet({
                   onChange={(e) =>
                     setDraft({ ...current, instrumentType: e.target.value as InstrumentType })
                   }
-                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
                   data-testid="attr-type"
                 >
                   {TYPES.map((t) => (
@@ -259,7 +259,7 @@ export default function AttributeKindSheet({
                 <select
                   value={current.assetClass}
                   onChange={(e) => setDraft({ ...current, assetClass: e.target.value as AssetClass })}
-                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
                   data-testid="attr-class"
                 >
                   {CLASSES.map((c) => (
@@ -276,7 +276,7 @@ export default function AttributeKindSheet({
                   value={current.region ?? ''}
                   onChange={(e) => setDraft({ ...current, region: e.target.value })}
                   placeholder="例如 US / HK / CN"
-                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
                   data-testid="attr-region"
                 />
               </label>

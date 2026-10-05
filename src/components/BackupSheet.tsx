@@ -170,7 +170,7 @@ export default function BackupSheet({ open, onClose, repo, onChanged }: BackupSh
 
       {/* ---------------- 导出 ---------------- */}
       <section className="mt-3 rounded-2xl border border-line bg-s1 p-3">
-        <h3 className="text-[13px] font-medium text-ink">导出备份</h3>
+        <h3 className="text-[13px] font-medium text-ink1">导出备份</h3>
         <p className="mt-1 text-[11px] leading-relaxed text-ink4">
           包含完整数据（账户 / 标的 / 持仓 / <span className="text-ink3">全部交易流水</span> /
           行情 / 汇率 / 快照 / 分类审计），并附带版本信封与校验和。
@@ -190,7 +190,7 @@ export default function BackupSheet({ open, onClose, repo, onChanged }: BackupSh
 
       {/* ---------------- 导入 ---------------- */}
       <section className="mt-3 rounded-2xl border border-line bg-s1 p-3">
-        <h3 className="text-[13px] font-medium text-ink">导入 / 恢复</h3>
+        <h3 className="text-[13px] font-medium text-ink1">导入 / 恢复</h3>
         <p className="mt-1 rounded-xl border border-warn/25 bg-warn/10 px-2.5 py-1.5 text-[11px] leading-relaxed tone-warn">
           <AlertTriangle size={11} className="mr-1 inline" />
           <span className="text-ink2">导入会替换当前全部数据</span>

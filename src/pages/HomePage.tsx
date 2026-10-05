@@ -65,7 +65,7 @@ export default function HomePage({
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[12px] text-ink3">净资产 CNY</p>
-            <p className="mt-1 text-[30px] font-semibold leading-none text-ink" data-testid="net-worth">
+            <p className="mt-1 text-[30px] font-semibold leading-none text-ink1" data-testid="net-worth">
               {cny(totals.netWorth)}
             </p>
           </div>
@@ -83,10 +83,10 @@ export default function HomePage({
 
         <div className="mt-3 flex gap-4 text-[12px]">
           <span className="text-ink2">
-            总资产 <span className="text-ink" data-testid="total-assets">{cny(totals.totalAssets)}</span>
+            总资产 <span className="text-ink1" data-testid="total-assets">{cny(totals.totalAssets)}</span>
           </span>
           <span className="text-ink2">
-            负债 <span className="text-ink" data-testid="total-liabilities">{cny(totals.totalLiabilities)}</span>
+            负债 <span className="text-ink1" data-testid="total-liabilities">{cny(totals.totalLiabilities)}</span>
           </span>
         </div>
 
@@ -123,7 +123,7 @@ export default function HomePage({
           className="mt-3 w-full rounded-2xl border border-line bg-s1 p-4 text-left"
           data-testid="home-cold-start"
         >
-          <p className="text-[14px] font-medium text-ink">先建立你的资产结构</p>
+          <p className="text-[14px] font-medium text-ink1">先建立你的资产结构</p>
           <p className="mt-1 text-[11px] leading-relaxed text-ink4">
             现在还没有任何数据。去「资产」页创建账户与标的，就可以开始记录交易了。
           </p>
@@ -153,7 +153,7 @@ export default function HomePage({
                 <span className="w-24 shrink-0 text-ink2">
                   {ASSET_CLASS_LABEL[b.key as keyof typeof ASSET_CLASS_LABEL] ?? b.label}
                 </span>
-                <span className="w-28 shrink-0 text-right text-ink">{cny(b.valueCny)}</span>
+                <span className="w-28 shrink-0 text-right text-ink1">{cny(b.valueCny)}</span>
                 <span className="w-12 shrink-0 text-right text-ink3">
                   {b.share === undefined ? '—' : pct(b.share)}
                 </span>
@@ -179,29 +179,29 @@ export default function HomePage({
         <dl className="mt-3 space-y-1.5 text-[12px]">
           <div className="flex justify-between">
             <dt className="text-ink3">可靠资产金额</dt>
-            <dd className="text-ink" data-testid="reliable-value">{cny(analysis.reliableValueCny)}</dd>
+            <dd className="text-ink1" data-testid="reliable-value">{cny(analysis.reliableValueCny)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">可靠持仓数</dt>
-            <dd className="text-ink" data-testid="reliable-count">
+            <dd className="text-ink1" data-testid="reliable-count">
               {cov.reliableCount} / {cov.totalHoldings}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">无法估值</dt>
-            <dd className={cov.unavailableCount > 0 ? 'tone-warn' : 'text-ink'} data-testid="unavailable-count">
+            <dd className={cov.unavailableCount > 0 ? 'tone-warn' : 'text-ink1'} data-testid="unavailable-count">
               {cov.unavailableCount} 项
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">估值已过期</dt>
-            <dd className={cov.staleCount > 0 ? 'tone-warn' : 'text-ink'} data-testid="stale-count">
+            <dd className={cov.staleCount > 0 ? 'tone-warn' : 'text-ink1'} data-testid="stale-count">
               {cov.staleCount} 项
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">分类待确认</dt>
-            <dd className={cov.unconfirmedCount > 0 ? 'tone-warn' : 'text-ink'} data-testid="unconfirmed-count">
+            <dd className={cov.unconfirmedCount > 0 ? 'tone-warn' : 'text-ink1'} data-testid="unconfirmed-count">
               {cov.unconfirmedCount} 项
             </dd>
           </div>

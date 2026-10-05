@@ -50,7 +50,7 @@ export default function AnalysisTab({ analysis, duplicates }: AnalysisTabProps) 
   return (
     <div className="mx-auto w-full max-w-[480px] px-4">
       <header className="pt-4">
-        <h1 className="text-[15px] font-medium text-ink">资产分析</h1>
+        <h1 className="text-[15px] font-medium text-ink1">资产分析</h1>
         <p className="mt-1 text-[11px] text-ink4" data-testid="analysis-total">
           可靠金额基准 {cny(analysis.reliableValueCny)} · {cov.reliableCount}/{cov.totalHoldings} 项
         </p>
@@ -95,7 +95,7 @@ export default function AnalysisTab({ analysis, duplicates }: AnalysisTabProps) 
                 <li key={b.key} className="text-[12px]">
                   <div className="flex items-center gap-2">
                     <span className="flex-1 truncate text-ink2">{b.label}</span>
-                    <span className="text-ink">{cny(b.valueCny)}</span>
+                    <span className="text-ink1">{cny(b.valueCny)}</span>
                     <span className="w-12 shrink-0 text-right text-ink3">
                       {b.share === undefined ? '—' : `${(b.share * 100).toFixed(1)}%`}
                     </span>

@@ -88,7 +88,7 @@ export default function App2({ initialTab = 'home' }: { initialTab?: W2Tab }) {
               type="button"
               onClick={() => setTab(key)}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] ${
-                tab === key ? 'text-ink' : 'text-ink4'
+                tab === key ? 'text-ink1' : 'text-ink4'
               }`}
               data-testid={`nav-${key}`}
             >

@@ -72,7 +72,7 @@ export default function ColdStartGuide({
       className="mt-3 rounded-2xl border border-line bg-s1 p-4"
       data-testid="cold-start-guide"
     >
-      <h2 className="text-[14px] font-medium text-ink">先建立你的资产结构</h2>
+      <h2 className="text-[14px] font-medium text-ink1">先建立你的资产结构</h2>
       <p className="mt-1 text-[11px] leading-relaxed text-ink4">
         现在还没有数据。按下面三步建立结构后，就可以开始记录交易流水了。
       </p>
@@ -95,7 +95,7 @@ export default function ColdStartGuide({
                   {s.done ? '✓' : i + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 text-[13px] text-ink">
+                  <span className="flex items-center gap-1.5 text-[13px] text-ink1">
                     <Icon size={13} className="text-ink3" />
                     {s.title}
                   </span>

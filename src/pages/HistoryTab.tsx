@@ -163,7 +163,7 @@ export default function HistoryTab({ trend, portfolio, repo, onChanged }: Histor
   return (
     <div className="mx-auto w-full max-w-[480px] px-4">
       <header className="pt-4">
-        <h1 className="text-[15px] font-medium text-ink">资产历史</h1>
+        <h1 className="text-[15px] font-medium text-ink1">资产历史</h1>
         <p className="mt-1 text-[11px] text-ink4" data-testid="tx-counts">
           {counts.posted} 笔有效
           {counts.voided > 0 ? ` · ${counts.voided} 笔已作废` : ''} · {shownTrend.points.length} 个快照
@@ -259,7 +259,7 @@ export default function HistoryTab({ trend, portfolio, repo, onChanged }: Histor
                   >
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[13px] text-ink">{pt.date}</p>
+                        <p className="text-[13px] text-ink1">{pt.date}</p>
                         <p className="mt-0.5 text-[11px]" data-testid="capture-kind">
                           <span
                             className={
@@ -278,7 +278,7 @@ export default function HistoryTab({ trend, portfolio, repo, onChanged }: Histor
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-[13px] text-ink" data-testid="history-networth">
+                        <p className="text-[13px] text-ink1" data-testid="history-networth">
                           {cny(pt.netWorth)}
                         </p>
                         <p className="text-[10px] text-ink4">净资产</p>
@@ -370,7 +370,7 @@ export default function HistoryTab({ trend, portfolio, repo, onChanged }: Histor
                                     data-testid="basis-position"
                                   >
                                     <div className="flex items-start justify-between gap-2">
-                                      <span className="min-w-0 flex-1 truncate text-[11px] text-ink">
+                                      <span className="min-w-0 flex-1 truncate text-[11px] text-ink1">
                                         {instrumentById.get(pos.instrumentId)?.name ?? pos.instrumentId}
                                       </span>
                                       <span className="shrink-0 text-[10px] text-ink4">

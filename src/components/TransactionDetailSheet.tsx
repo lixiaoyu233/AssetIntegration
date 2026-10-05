@@ -162,7 +162,7 @@ export default function TransactionDetailSheet({
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between gap-3">
             <dt className="shrink-0 text-ink3">{k}</dt>
-            <dd className="min-w-0 break-all text-right text-ink">{v}</dd>
+            <dd className="min-w-0 break-all text-right text-ink1">{v}</dd>
           </div>
         ))}
       </dl>
@@ -254,7 +254,7 @@ export default function TransactionDetailSheet({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="作废原因（可选）"
-            className="mt-2 w-full rounded-lg border border-line bg-s1 px-2 py-1.5 text-[12px] text-ink"
+            className="mt-2 w-full rounded-lg border border-line bg-s1 px-2 py-1.5 text-[12px] text-ink1"
             data-testid="tx-void-reason"
           />
           <div className="mt-2 flex gap-2">
@@ -299,7 +299,7 @@ export default function TransactionDetailSheet({
         data-testid="tx-detail-flow"
       >
         外部现金流：
-        <span className={external ? 'text-ink' : 'text-ink3'}>
+        <span className={external ? 'text-ink1' : 'text-ink3'}>
           {external
             ? tx.type === 'deposit'
               ? '属于外部流入'

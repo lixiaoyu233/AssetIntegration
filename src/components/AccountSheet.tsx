@@ -91,7 +91,7 @@ export default function AccountSheet({ open, onClose, repo, onCreated }: Account
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="例如：日常储蓄卡"
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="account-name"
           />
         </label>
@@ -101,7 +101,7 @@ export default function AccountSheet({ open, onClose, repo, onCreated }: Account
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AccountType)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="account-type"
           >
             {TYPES.map((t) => (
@@ -117,7 +117,7 @@ export default function AccountSheet({ open, onClose, repo, onCreated }: Account
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="account-currency"
           >
             {currencyOptions().map((c) => (
@@ -133,7 +133,7 @@ export default function AccountSheet({ open, onClose, repo, onCreated }: Account
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value as AccountRegion | '')}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="account-region"
           >
             <option value="">不指定</option>
@@ -150,7 +150,7 @@ export default function AccountSheet({ open, onClose, repo, onCreated }: Account
           <input
             value={institution}
             onChange={(e) => setInstitution(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="account-institution"
           />
         </label>

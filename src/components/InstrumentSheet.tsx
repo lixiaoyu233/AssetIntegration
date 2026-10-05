@@ -113,7 +113,7 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="例如：某指数基金"
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="instrument-name"
           />
         </label>
@@ -123,7 +123,7 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
           <input
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="instrument-symbol"
           />
         </label>
@@ -133,7 +133,7 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
           <select
             value={instrumentType}
             onChange={(e) => setInstrumentType(e.target.value as InstrumentType)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="instrument-type"
           >
             {TYPES.map((t) => (
@@ -152,7 +152,7 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
               setAssetClass(e.target.value as AssetClass)
               setError(null)
             }}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="instrument-asset-class"
           >
             <option value="">请选择…</option>
@@ -169,7 +169,7 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="instrument-currency"
           >
             {currencyOptions().map((c) => (
@@ -185,7 +185,7 @@ export default function InstrumentSheet({ open, onClose, repo, onCreated }: Inst
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value as Region | '')}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="instrument-region"
           >
             <option value="">不指定</option>

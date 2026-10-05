@@ -301,7 +301,7 @@ export default function TransactionSheet({
               setInstrumentId('')
               setCashInstrumentId('')
             }}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="tx-account"
           >
             {portfolio.accounts.map((a) => (
@@ -319,7 +319,7 @@ export default function TransactionSheet({
             <select
               value={cashInstrumentId}
               onChange={(e) => setCashInstrumentId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="tx-cash"
             >
               <option value="">请选择…</option>
@@ -339,7 +339,7 @@ export default function TransactionSheet({
             <select
               value={toCashInstrumentId}
               onChange={(e) => setToCashInstrumentId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="tx-to-cash"
             >
               <option value="">请选择…</option>
@@ -359,7 +359,7 @@ export default function TransactionSheet({
             <select
               value={instrumentId}
               onChange={(e) => setInstrumentId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="tx-instrument"
             >
               <option value="">请选择…</option>
@@ -387,7 +387,7 @@ export default function TransactionSheet({
             <select
               value={toAccountId}
               onChange={(e) => setToAccountId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="tx-to-account"
             >
               <option value="">请选择…</option>
@@ -420,7 +420,7 @@ export default function TransactionSheet({
                   if (spec.fields.price) syncAmountFromPrice(e.target.value, price)
                   else if (type === 'transfer') setAmount(e.target.value)
                 }}
-                className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink disabled:opacity-50"
+                className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1 disabled:opacity-50"
                 data-testid="tx-quantity"
               />
               {type === 'transfer' ? (
@@ -454,7 +454,7 @@ export default function TransactionSheet({
                     setPrice(e.target.value)
                     syncAmountFromPrice(quantity, e.target.value)
                   }}
-                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
                   data-testid="tx-price"
                 />
               </label>
@@ -470,7 +470,7 @@ export default function TransactionSheet({
               inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="tx-amount"
             />
           </label>
@@ -484,7 +484,7 @@ export default function TransactionSheet({
               inputMode="decimal"
               value={toAmount}
               onChange={(e) => setToAmount(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="tx-to-amount"
             />
             {Number(amount) > 0 && Number(toAmount) > 0 ? (
@@ -503,7 +503,7 @@ export default function TransactionSheet({
               inputMode="decimal"
               value={fee}
               onChange={(e) => setFee(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+              className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
               data-testid="tx-fee"
             />
           </label>
@@ -516,7 +516,7 @@ export default function TransactionSheet({
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="tx-date"
           />
         </label>
@@ -527,7 +527,7 @@ export default function TransactionSheet({
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="tx-note"
           />
         </label>

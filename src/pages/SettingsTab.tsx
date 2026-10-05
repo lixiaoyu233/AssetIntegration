@@ -104,7 +104,7 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
   return (
     <div className="mx-auto w-full max-w-[480px] px-4">
       <header className="pt-4">
-        <h1 className="text-[15px] font-medium text-ink">设置</h1>
+        <h1 className="text-[15px] font-medium text-ink1">设置</h1>
         <p className="mt-1 text-[11px] text-ink4">数据来源与状态说明</p>
       </header>
 
@@ -116,29 +116,29 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
         <dl className="mt-3 space-y-1.5 text-[12px]">
           <div className="flex justify-between">
             <dt className="text-ink3">业务事实源</dt>
-            <dd className="text-ink">IndexedDB（本地）</dd>
+            <dd className="text-ink1">IndexedDB（本地）</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">Portfolio Schema</dt>
-            <dd className="text-ink" data-testid="schema-version">
+            <dd className="text-ink1" data-testid="schema-version">
               V{PORTFOLIO_SCHEMA_VERSION}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">数据库版本</dt>
-            <dd className="text-ink" data-testid="db-version">
+            <dd className="text-ink1" data-testid="db-version">
               DB v{DB_VERSION}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">账户 / 标的 / 持仓</dt>
-            <dd className="text-ink">
+            <dd className="text-ink1">
               {portfolio.accounts.length} / {portfolio.instruments.length} / {portfolio.holdings.length}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">交易 / 快照</dt>
-            <dd className="text-ink">
+            <dd className="text-ink1">
               {portfolio.transactions.length} / {portfolio.snapshots.length}
             </dd>
           </div>
@@ -156,13 +156,13 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
       {/* 完整度 */}
       {/* W7：备份与数据耐久性 */}
       <section className="mt-3 rounded-2xl border border-line bg-s1 p-4" data-testid="storage-info">
-        <h2 className="text-[13px] font-medium text-ink">备份与数据保存</h2>
+        <h2 className="text-[13px] font-medium text-ink1">备份与数据保存</h2>
         <dl className="mt-2 space-y-1 text-[12px]">
           <div className="flex justify-between">
             <dt className="text-ink3">持久化存储</dt>
             <dd className="text-right" data-testid="storage-persisted">
               {storage.persisted === true ? (
-                <span className="text-ink">已授予</span>
+                <span className="text-ink1">已授予</span>
               ) : storage.persisted === false ? (
                 <span className="tone-warn">未授予（数据仍可用，但建议定期导出）</span>
               ) : (
@@ -172,7 +172,7 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">本机占用</dt>
-            <dd className="text-ink" data-testid="storage-usage">
+            <dd className="text-ink1" data-testid="storage-usage">
               {storage.estimate
                 ? `${(storage.estimate.usage / 1024 / 1024).toFixed(2)} MB / 可用 ${(
                     storage.estimate.quota /
@@ -202,7 +202,7 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
 
       {/* W6：行情与汇率覆盖率 —— 让「为什么某项无法估值」一眼可见 */}
       <section className="mt-3 rounded-2xl border border-line bg-s1 p-4" data-testid="market-data-info">
-        <h2 className="text-[13px] font-medium text-ink">行情与汇率</h2>
+        <h2 className="text-[13px] font-medium text-ink1">行情与汇率</h2>
         <p className="mt-1 text-[11px] text-ink4">
           行情可自动获取（场外基金取净值、股票 / ETF 取市场价），
           在应用启动和点「更新行情」时拉取；汇率会自动获取并用库内兜底。查不到时可手动录入。
@@ -210,20 +210,20 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
         <dl className="mt-2 space-y-1 text-[12px]">
           <div className="flex justify-between">
             <dt className="text-ink3">已有行情</dt>
-            <dd className="text-ink" data-testid="market-quote-count">
+            <dd className="text-ink1" data-testid="market-quote-count">
               {coverage.withQuote} 项
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">缺行情（无法估值）</dt>
-            <dd className={coverage.missingQuote > 0 ? 'tone-warn' : 'text-ink'} data-testid="market-missing-quote">
+            <dd className={coverage.missingQuote > 0 ? 'tone-warn' : 'text-ink1'} data-testid="market-missing-quote">
               {coverage.missingQuote} 项
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">缺汇率币种</dt>
             <dd
-              className={coverage.missingFxCurrencies.length > 0 ? 'tone-warn' : 'text-ink'}
+              className={coverage.missingFxCurrencies.length > 0 ? 'tone-warn' : 'text-ink1'}
               data-testid="market-missing-fx"
             >
               {coverage.missingFxCurrencies.length > 0
@@ -233,7 +233,7 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">存在过期行情</dt>
-            <dd className={coverage.hasStale ? 'tone-warn' : 'text-ink'} data-testid="market-stale">
+            <dd className={coverage.hasStale ? 'tone-warn' : 'text-ink1'} data-testid="market-stale">
               {coverage.hasStale ? '是（不计入可靠总额）' : '否'}
             </dd>
           </div>
@@ -296,25 +296,25 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
         <dl className="mt-3 space-y-1.5 text-[12px]">
           <div className="flex justify-between">
             <dt className="text-ink3">可靠持仓</dt>
-            <dd className="text-ink">
+            <dd className="text-ink1">
               {analysis.coverage.reliableCount} / {analysis.coverage.totalHoldings}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">无法估值</dt>
-            <dd className={analysis.coverage.unavailableCount ? 'tone-warn' : 'text-ink'}>
+            <dd className={analysis.coverage.unavailableCount ? 'tone-warn' : 'text-ink1'}>
               {analysis.coverage.unavailableCount} 项
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">估值已过期</dt>
-            <dd className={analysis.coverage.staleCount ? 'tone-warn' : 'text-ink'}>
+            <dd className={analysis.coverage.staleCount ? 'tone-warn' : 'text-ink1'}>
               {analysis.coverage.staleCount} 项
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">分类待确认</dt>
-            <dd className={analysis.coverage.unconfirmedCount ? 'tone-warn' : 'text-ink'}>
+            <dd className={analysis.coverage.unconfirmedCount ? 'tone-warn' : 'text-ink1'}>
               {analysis.coverage.unconfirmedCount} 项
             </dd>
           </div>
@@ -364,15 +364,15 @@ export default function SettingsTab({ portfolio, analysis, repo, onChanged, fxSy
         <dl className="mt-3 space-y-1.5 text-[12px]">
           <div className="flex justify-between">
             <dt className="text-ink3">快照总数</dt>
-            <dd className="text-ink">{historyStats.total}</dd>
+            <dd className="text-ink1">{historyStats.total}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">含历史分类</dt>
-            <dd className="text-ink">{historyStats.withClass}</dd>
+            <dd className="text-ink1">{historyStats.withClass}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink3">来源未标记</dt>
-            <dd className={historyStats.unmarked ? 'tone-warn' : 'text-ink'}>
+            <dd className={historyStats.unmarked ? 'tone-warn' : 'text-ink1'}>
               {historyStats.unmarked}
             </dd>
           </div>

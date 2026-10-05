@@ -33,7 +33,7 @@ export default function ReadOnlyBanner({ message }: { message?: string }) {
     >
       <div className="mx-auto flex max-w-[480px] items-center gap-1.5 px-4 py-1.5 text-[11px] text-ink2">
         <Lock size={12} className="shrink-0 text-ink3" />
-        <span className="font-medium text-ink">只读预览模式</span>
+        <span className="font-medium text-ink1">只读预览模式</span>
         <span className="truncate text-ink4">
           · 数据已迁移，暂无法修改{message ? `（${message}）` : ''}
         </span>

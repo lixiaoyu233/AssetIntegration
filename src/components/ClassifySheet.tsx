@@ -219,7 +219,7 @@ export default function ClassifySheet({
                 data-testid="classify-row"
                 data-instrument-id={inst.id}
               >
-                <p className="truncate text-[13px] text-ink">{inst.name}</p>
+                <p className="truncate text-[13px] text-ink1">{inst.name}</p>
                 <p className="mt-0.5 text-[11px] text-ink4">
                   {holdingCount} 个持仓
                   {value !== undefined ? ` · 可估值 ¥${value.toLocaleString('zh-CN')}` : ' · 无法估值'}
@@ -236,7 +236,7 @@ export default function ClassifySheet({
                     onChange={(e) =>
                       setPending((p) => ({ ...p, [inst.id]: (e.target.value || undefined) as AssetClass | undefined }))
                     }
-                    className="flex-1 rounded-lg border border-line bg-s1 px-2 py-1.5 text-[12px] text-ink"
+                    className="flex-1 rounded-lg border border-line bg-s1 px-2 py-1.5 text-[12px] text-ink1"
                     data-testid="classify-select"
                     aria-label={`${inst.name} 的资产类别`}
                   >

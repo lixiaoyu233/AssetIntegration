@@ -218,7 +218,7 @@ export default function FxSheet({ open, onClose, portfolio, repo, onChanged, fxS
               setError(null)
               setDone(null)
             }}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="fx-currency"
           >
             {options.map((c) => (
@@ -250,7 +250,7 @@ export default function FxSheet({ open, onClose, portfolio, repo, onChanged, fxS
             value={rate}
             onChange={(e) => setRate(e.target.value)}
             placeholder="例如 7.12"
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="fx-rate"
           />
         </label>
@@ -261,7 +261,7 @@ export default function FxSheet({ open, onClose, portfolio, repo, onChanged, fxS
             type="datetime-local"
             value={when}
             onChange={(e) => setWhen(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-s1 px-2 py-2 text-[12px] text-ink1"
             data-testid="fx-timestamp"
           />
         </label>
