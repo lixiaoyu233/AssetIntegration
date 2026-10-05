@@ -1,0 +1,53 @@
+{
+  "name": "资产整合",
+  "short_name": "资产整合",
+  "description": "本地优先的个人资产归集工具。账户、持仓、手工行情与汇率、每日快照与历史趋势，数据只保存在本机浏览器。",
+  "id": "/AssetIntegration/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": [
+    "finance",
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "查看基金持仓",
+      "url": "./?open=cat_fund"
+    },
+    {
+      "name": "策略与再平衡",
+      "url": "./?open=strategy"
+    }
+  ]
+}

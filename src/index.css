@@ -1,0 +1,340 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==================================================================
+ * 主题 Token
+ * ------------------------------------------------------------------
+ * 两套主题共用同一组语义变量名，组件只引用变量、不写死颜色，
+ * 因此切换 <html data-theme> 就能整体换肤（也支持自动跟随系统）。
+ * ================================================================== */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --app: #000000;
+
+  /* 表面层级 */
+  --s1: #161616;
+  --s2: rgba(255, 255, 255, 0.04);
+  --s3: rgba(255, 255, 255, 0.05);
+  --s4: #1f1f1f;
+  --s1-to: #101010;
+
+  /* 文字层级 */
+  --ink1: #fafafa;
+  --ink2: #d4d4d8;
+  --ink3: #a1a1aa;
+  --ink4: #71717a;
+
+  /* 反色（主按钮底 + 其文字） */
+  --invert: #fafafa;
+  --on-invert: #09090b;
+
+  /* 边框 */
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.22);
+
+  /* 涨跌：遵循 A 股习惯，红涨绿跌 */
+  --up: #ff5a5f;
+  --down: #2ed47a;
+
+  /* 语义状态色 */
+  --warn: #fcd34d;
+  --info: #7dd3fc;
+  --good: #6ee7b7;
+  --danger: #f87171;
+
+  /* 分类主题色 */
+  --accent-gold: #f0b90b;
+  --accent-gold-soft: rgba(240, 185, 11, 0.16);
+  --accent-blue: #3b82f6;
+  --accent-blue-soft: rgba(59, 130, 246, 0.16);
+  --accent-green: #22c55e;
+  --accent-green-soft: rgba(34, 197, 94, 0.16);
+  --accent-red: #ef4444;
+  --accent-red-soft: rgba(239, 68, 68, 0.16);
+  --accent-purple: #a855f7;
+  --accent-purple-soft: rgba(168, 85, 247, 0.16);
+  --accent-cyan: #06b6d4;
+  --accent-cyan-soft: rgba(6, 182, 212, 0.16);
+  --accent-orange: #f97316;
+  --accent-orange-soft: rgba(249, 115, 22, 0.16);
+  --accent-pink: #ec4899;
+  --accent-pink-soft: rgba(236, 72, 153, 0.16);
+  --accent-slate: #a1a1aa;
+  --accent-slate-soft: rgba(161, 161, 170, 0.18);
+
+  /* 阴影与图表 */
+  --shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.9);
+  --shadow-sheet: 0 -8px 40px -12px rgba(0, 0, 0, 0.95);
+  --chart-grid: #27272a;
+  --chart-tick: #a1a1aa;
+  --chart-label: #b4b4bb;
+  --scrim: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --app: #f5f5f4;
+
+  --s1: #ffffff;
+  --s2: rgba(24, 24, 27, 0.045);
+  --s3: rgba(24, 24, 27, 0.06);
+  --s4: #f4f4f5;
+  --s1-to: #f6f6f5;
+
+  --ink1: #18181b;
+  --ink2: #3f3f46;
+  --ink3: #5b5b62;
+  --ink4: #74747b;
+
+  --invert: #18181b;
+  --on-invert: #fafafa;
+
+  --line: rgba(24, 24, 27, 0.1);
+  --line-strong: rgba(24, 24, 27, 0.32);
+
+  /* 白天主题下把红涨绿跌压深，保证在白底上可读 */
+  --up: #c62a1e;
+  --down: #05603a;
+
+  --warn: #a15c07;
+  --info: #0369a1;
+  --good: #047857;
+  --danger: #b42318;
+
+  --accent-gold: #a16207;
+  --accent-gold-soft: rgba(161, 98, 7, 0.14);
+  --accent-blue: #1d4ed8;
+  --accent-blue-soft: rgba(29, 78, 216, 0.12);
+  --accent-green: #15803d;
+  --accent-green-soft: rgba(21, 128, 61, 0.12);
+  --accent-red: #dc2626;
+  --accent-red-soft: rgba(220, 38, 38, 0.12);
+  --accent-purple: #7e22ce;
+  --accent-purple-soft: rgba(126, 34, 206, 0.12);
+  --accent-cyan: #0e7490;
+  --accent-cyan-soft: rgba(14, 116, 144, 0.12);
+  --accent-orange: #c2410c;
+  --accent-orange-soft: rgba(194, 65, 12, 0.12);
+  --accent-pink: #be185d;
+  --accent-pink-soft: rgba(190, 24, 93, 0.12);
+  --accent-slate: #71717a;
+  --accent-slate-soft: rgba(113, 113, 122, 0.14);
+
+  --shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.9) inset, 0 8px 20px -14px rgba(24, 24, 27, 0.35);
+  --shadow-sheet: 0 -8px 36px -14px rgba(24, 24, 27, 0.4);
+  --chart-grid: #d4d4d8;
+  --chart-tick: #52525b;
+  --chart-label: #3f3f46;
+  --scrim: rgba(24, 24, 27, 0.45);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background-color: var(--app);
+  }
+
+  body {
+    @apply text-ink1 antialiased;
+    background-color: var(--app);
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* 切换主题时的柔和过渡；只作用于颜色相关属性，不干扰布局动画 */
+  .theme-switching,
+  .theme-switching *:not(svg):not(path) {
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease,
+      color 200ms ease;
+  }
+
+  /* 去掉数字输入框上下箭头，移动端更接近原生 App */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  /* 统一两套主题下的原生控件外观 */
+  input,
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  select {
+    /* 自绘下拉箭头，避免系统箭头在两套主题下颜色不一致 */
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 15px) calc(50% + 1px), calc(100% - 10px) calc(50% + 1px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 26px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent-gold) 30%, transparent);
+  }
+}
+
+@layer components {
+  /* 卡片：表面渐变 + 16px 圆角 + 极弱边框 */
+  .card-surface {
+    @apply relative overflow-hidden rounded-card border border-line;
+    background-image: linear-gradient(160deg, var(--s1) 0%, var(--s1-to) 100%);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-surface:active {
+    @apply border-line-strong;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-[12px] font-medium text-ink4;
+  }
+
+  .field-input {
+    @apply w-full rounded-xl border border-line px-3.5 py-3 text-[15px] text-ink1 outline-none transition
+      placeholder:text-ink4 focus:border-line-strong;
+    background-color: var(--s3);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[14px] font-medium
+      transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply btn bg-invert text-on-invert hover:opacity-90;
+  }
+
+  .btn-ghost {
+    @apply btn border border-line text-ink2 hover:border-line-strong;
+    background-color: var(--s2);
+  }
+
+  .btn-danger {
+    @apply btn border text-danger;
+    border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+    background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-ink3;
+    background-color: var(--s2);
+  }
+
+  /* 语义色文本：白天主题会自动换成深色版 */
+  .tone-up {
+    color: var(--up);
+  }
+  .tone-down {
+    color: var(--down);
+  }
+  .tone-warn {
+    color: var(--warn);
+  }
+  .tone-info {
+    color: var(--info);
+  }
+  .tone-good {
+    color: var(--good);
+  }
+  .tone-danger {
+    color: var(--danger);
+  }
+
+  /* 语义色徽标 */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10.5px];
+  }
+  .badge-warn {
+    @apply badge;
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+    background-color: color-mix(in srgb, var(--warn) 12%, transparent);
+  }
+  .badge-info {
+    @apply badge;
+    color: var(--info);
+    border-color: color-mix(in srgb, var(--info) 30%, transparent);
+    background-color: color-mix(in srgb, var(--info) 12%, transparent);
+  }
+  .badge-good {
+    @apply badge;
+    color: var(--good);
+    border-color: color-mix(in srgb, var(--good) 30%, transparent);
+    background-color: color-mix(in srgb, var(--good) 12%, transparent);
+  }
+  .badge-danger {
+    @apply badge;
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+    background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+  }
+  .badge-muted {
+    @apply badge border-line text-ink3;
+    background-color: var(--s2);
+  }
+
+  /* 警示条 */
+  .notice-warn {
+    @apply flex items-start gap-2 rounded-2xl border px-3.5 py-2.5 text-[12px] leading-relaxed;
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 28%, transparent);
+    background-color: color-mix(in srgb, var(--warn) 10%, transparent);
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+
+  /*
+    顶部安全区。
+
+    - 普通 Safari：env(safe-area-inset-top) 为 0，只留 8px 呼吸空间。
+    - 独立窗口模式（添加到主屏幕）：系统已经为状态栏预留了空间，
+      这里只留 8px —— 不能再叠加 env(safe-area-inset-top)，
+      否则内容会被整体推下去，触摸坐标也会与实际绘制位置错位。
+  */
+  /*
+    顶部安全区高度。
+    默认取 env()，但真正生效的是首屏前内联脚本写入的实测/兜底值（见 index.html 与 lib/safeArea.ts），
+    因为 iOS 独立窗口模式下 env(safe-area-inset-top) 有时会返回 0，导致内容被状态栏遮住。
+  */
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-top {
+    /* 走 --safe-top 变量（默认等于 env(safe-area-inset-top)），
+       这样独立模式那条规则只要把变量置 0 就能整体生效 */
+    padding-top: calc(var(--safe-top, 0px) + 8px);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .tap-none {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+}

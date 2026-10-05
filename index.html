@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta
+      name="description"
+      content="资产整合 — 本地优先的个人资产归集工具。账户、持仓、手工行情与汇率、每日快照与历史趋势，数据只保存在本机浏览器。"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <!-- 地址栏 / PWA 状态栏配色，跟随系统主题；运行时 useTheme 会按用户选择覆盖 -->
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f5f5f4" media="(prefers-color-scheme: light)" />
+
+    <!-- ============ PWA：可添加到主屏幕 ============ -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <!-- iOS 不读 manifest 里的图标，必须单独提供 apple-touch-icon（PNG） -->
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!--
+      状态栏保持 black-translucent（深色、沉浸式）。
+      实测：独立窗口模式下网页确实会延伸到状态栏后面，所以必须由页面自己避开。
+      但 env(safe-area-inset-top) 在 iOS 上并不可靠（有时返回 0），
+      因此改为「运行时实测 + 兜底估算」，见下方脚本与 src/lib/safeArea.ts。
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="资产整合" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="资产整合" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <script>
+      // 顶部安全区：首屏绘制前就要定下来，否则会先看到被状态栏遮住的一帧。
+      // 这里不引模块，直接内联同样逻辑（与 src/lib/safeArea.ts 保持一致）。
+      (function () {
+        var root = document.documentElement;
+        try {
+          var standalone =
+            window.navigator.standalone === true ||
+            (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+            (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches);
+          if (standalone) root.setAttribute('data-standalone', '1');
+
+          // 实测 env(safe-area-inset-top)
+          var probe = document.createElement('div');
+          probe.style.cssText =
+            'position:fixed;left:-9999px;top:0;width:0;height:0;pointer-events:none;' +
+            'padding-top:env(safe-area-inset-top, 0px)';
+          (document.body || root).appendChild(probe);
+          var envTop = parseFloat(getComputedStyle(probe).paddingTop) || 0;
+          if (probe.parentNode) probe.parentNode.removeChild(probe);
+
+          var inset = 0;
+          var source = 'env';
+          if (envTop > 0) {
+            inset = envTop;
+          } else if (standalone) {
+            // 仅独立窗口模式需要自己避让状态栏；普通 Safari 的地址栏不会压住内容，
+            // 若也补上会平白多出一大块留白
+            inset = 0;
+            source = 'standalone-no-env';
+            var w = Math.min(window.screen && window.screen.width || 0, window.innerWidth);
+            inset = w >= 420 ? 59 : w >= 390 ? 54 : w >= 375 ? 47 : 20;
+            source = 'estimate';
+          }
+          root.style.setProperty('--safe-top', inset + 'px');
+          root.setAttribute('data-safe-top-source', source);
+        } catch (e) {
+          // 兜底：任何异常都先给一个保守值，避免内容被状态栏盖住
+          root.style.setProperty('--safe-top', '47px');
+          root.setAttribute('data-safe-top-source', 'fallback');
+        }
+      })();
+    </script>
+    <title>资产整合</title>
+
+    <!--
+      首屏防闪白：在样式表之前先定好 data-theme / color-scheme，
+      否则夜间用户会先闪一帧浅色再跳回深色。
+      这段脚本必须同步执行，不要改成 defer / type=module。
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('asset-card-wallet/theme')
+          var theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : saved === 'true'
+                ? 'dark'
+                : saved === 'false'
+                  ? 'light'
+                  : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+                    ? 'light'
+                    : 'dark'
+          var root = document.documentElement
+          root.setAttribute('data-theme', theme)
+          root.style.colorScheme = theme
+          var bg = theme === 'light' ? '#f5f5f4' : '#000000'
+          root.style.backgroundColor = bg
+          var metas = document.querySelectorAll('meta[name="theme-color"]')
+          for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', bg)
+        } catch (e) {
+          /* localStorage 不可用时保持默认深色 */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

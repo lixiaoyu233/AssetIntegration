@@ -1,0 +1,6 @@
+# pnpm 10+ 默认会拦截依赖的构建脚本，这里显式允许 esbuild；
+# 同时 package.json 里保留了 pnpm.onlyBuiltDependencies，兼容其他版本。
+allowBuilds:
+  esbuild: true
+packages:
+  - '.'
